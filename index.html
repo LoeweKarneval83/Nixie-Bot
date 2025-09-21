@@ -1,3 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nixie Bot</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .container {
+      width: 95%;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      box-sizing: border-box;
+    }
+
+    header {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      color: #007bff;
+      margin-bottom: 5px;
+    }
+
+    .controls, .admin-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+      width: 100%;
+      box-sizing: border-box;
+      align-items: center;
+    }
+
+    .controls input {
+      flex-grow: 1;
+      min-width: 150px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    .controls button, .admin-controls button, .adminBtn, .resolvedBtn {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.3s;
+    }
+
+    .controls button {
+      background-color: #007bff;
+      color: #fff;
+    }
+
+    .controls button:hover {
+      background-color: #0056b3;
+    }
+
+    .controls .sort-btn {
+      background-color: #28a745;
+    }
+
+    .controls .sort-btn:hover {
+      background-color: #218838;
+    }
+
+    #search-toggle-btn {
+      background-color: #17a2b8;
+    }
+
+    #search-toggle-btn.shop-mode {
+      background-color: #dc3545;
+    }
+
+    #search-toggle-btn:hover {
+      background-color: #138496;
+    }
+
+    .item {
+      padding: 15px;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      background-color: #fafafa;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      transition: background-color 0.2s;
+      box-sizing: border-box;
+    }
+    .item.inactive {
+      opacity: 0.5;
+      background-color: #f8f9fa;
+      border-color: #dee2e6;
+    }
+
+    .item span {
+      flex: 1 1 120px;
+    }
+    .item input {
+      flex: 1 1 100px;
+      padding: 5px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .item .removeBtn {
+      background-color: #dc3545;
+      color: #fff;
+    }
+    .item .removeBtn:hover {
+      background-color: #c82333;
+    }
+    .resolvedBtn {
+      background-color: #ffc107;
+      color: #212529;
+    }
+    .resolvedBtn:hover {
+      background-color: #e0a800;
+    }
+    .adminBtn {
+      background-color: #6c757d;
+      color: #fff;
+    }
+    .adminBtn:hover {
+      background-color: #5a6268;
+    }
+
+    #adminPanel {
+      display: none;
+      width: 100%;
+      margin-top: 20px;
+      border-top: 2px solid #007bff;
+      padding-top: 20px;
+    }
+
+    #addItemsSection textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      resize: vertical;
+      margin-bottom: 10px;
+    }
+
+    #adminInput, #shopNameInactive, #newPassword, #permsShops {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+      margin-top: 5px;
+    }
+
+    #report-view {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+
+    #report-view h2, #report-view p {
+      margin-bottom: 10px;
+    }
+
+    .report-buttons button {
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 5px;
+    }
+
+    #broken-btn {
+      background-color: #dc3545;
+      color: #fff;
+    }
+
+    #out-of-stock-btn {
+      background-color: #ffc107;
+      color: #212529;
+    }
+
+    .back-btn {
+      background-color: #6c757d;
+      color: #fff;
+    }
+
+    #mainAdminInactiveToggle, #shopOwnerInactiveToggle, #password-manager-section {
+      display: none;
+    }
+
+    #password-manager-section {
+      margin-top: 20px;
+      border-top: 2px solid #28a745;
+      padding-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div id="main-view">
+      <header>
+        <h1>Nixie Bot</h1>
+        <button id="adminBtn" class="adminBtn">Admin</button>
+      </header>
+
+      <div class="controls">
+        <input type="text" id="search-term" placeholder="Search item name...">
+        <button onclick="performSearch()">Search</button>
+        <button id="search-toggle-btn" onclick="toggleSearchMode()">Shop</button>
+      </div>
+
+      <div class="controls">
+        <button class="sort-btn" onclick="sortItems('alphabetical')">Sort Alphabetical</button>
+        <button class="sort-btn" onclick="sortItems('price')">Sort by Price</button>
+      </div>
+
+      <div id="item-list">
+        <p>Loading items...</p>
+      </div>
+
+      <div id="adminPanel">
+        <h2>Admin Panel</h2>
+        <div id="addItemsSection">
+          <h4>Add New Items</h4>
+          <p>Format: Shop > [Qty] Item [for] Price Currency (or Free)</p>
+          <p>Example: C4 > 64 Dirt for 1d or Shop > 10 Diamond for 5 gold or Shop > 1 Lapis Free</p>
+          <textarea id="adminInput" placeholder="Paste your items here..."></textarea>
+          <button onclick="addItems()">Add Items</button>
+        </div>
+
+        <div id="mainAdminInactiveToggle">
+          <h4>Toggle Shop Inactive Status</h4>
+          <input type="text" id="shopNameInactive" placeholder="Shop Name">
+          <button onclick="toggleShopInactiveStatus()">Toggle Status</button>
+        </div>
+
+        <div id="shopOwnerInactiveToggle">
+          <button id="toggleMyStatusBtn" onclick="toggleMyShopInactiveStatus()">Set My Shop Inactive</button>
+        </div>
+
+        <div id="password-manager-section">
+          <h2>Password Manager</h2>
+          <div id="admin-accounts"></div>
+          <h4>Add New Admin</h4>
+          <input type="text" id="newPassword" placeholder="New Password">
+          <input type="text" id="permsShops" placeholder="Shops (comma separated)">
+          <button onclick="addAdminAccount()">Add Account</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="report-view">
+      <h2>Report an Issue</h2>
+      <p>You are reporting an issue for:</p>
+      <p id="report-item-name"></p>
+      <p id="report-shop-name"></p>
+      <div class="report-buttons">
+        <button id="broken-btn" onclick="reportProblem('broken')">Shop is Broken</button>
+        <button id="out-of-stock-btn" onclick="reportProblem('outOfStock')">Out of Stock</button>
+      </div>
+      <button class="back-btn" onclick="closeReportPage()">Back to Search</button>
+    </div>
+  </div>
+
 <script type="module">
   // Import the functions you need from the SDKs you need
   import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
@@ -486,3 +776,5 @@
     renderItems(shopItems);
   })();
 </script>
+</body>
+</html>
