@@ -1,262 +1,23 @@
-<!DOCTYPE html>
- <html lang="en">
- <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Nixie Bot</title>
-  <style>
-  html, body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  }
-  body {
-  font-family: 'Segoe UI', sans-serif;
-  padding: 20px;
-  background: linear-gradient(135deg, #e0f7fa, #f5f5f5); /* Less saturated gradient */
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-  color: #333;
-  min-height: 100vh;
-  box-sizing: border-box;
-  }
-  h1 {
-  margin-bottom: 20px;
-  font-size: 2.5em;
-  text-align: center;
-  color: black; /* Changed Nixie Bot heading to black */
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; /* Black outline */
-  }
-  .controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 20px;
-  justify-content: center;
-  }
-  input[type="text"], textarea, input[type="number"] {
-  padding: 10px;
-  font-size: 1em;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  flex: 1;
-  min-width: 200px;
-  }
-  button {
-  padding: 10px 15px;
-  font-size: 1em;
-  border: none;
-  border-radius: 5px;
-  background-color: black;
-  color: white;
-  cursor: pointer;
-  }
-  button:hover {
-  background-color: #333;
-  }
-  #item-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 15px;
-  }
-  .item {
-  background: #fff;
-  border-radius: 8px;
-  padding: 15px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-  }
-  .item:hover {
-  transform: scale(1.03);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-  }
-  .item.inactive {
-  background-color: #fff176; /* Softer yellow for inactive shops */
-  }
-  .item input {
-  width: 100%;
-  margin-bottom: 5px;
-  padding: 6px;
-  font-size: 1em;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-sizing: border-box;
-  }
-  .item span, .item button {
-  display: block;
-  margin: 5px 0;
-  cursor: pointer;
-  color: black;
-  }
-  .item span:hover {
-  text-decoration: none;
-  }
-  .item .removeBtn {
-  margin-top: 10px;
-  background-color: #e57373; /* Softer red */
-  color: white;
-  }
-  .item .removeBtn:hover {
-  background-color: #cc4444;
-  }
-  .resolvedBtn {
-  background-color: #81c784; /* Softer green */
-  margin-right: 5px;
-  }
-  .resolvedBtn:hover {
-  background-color: #66bb6a;
-  }
-  #adminPanel {
-  display: none;
-  margin-top: 20px;
-  }
-  #adminBtn {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background-color: black;
-  }
-  #adminBtn:hover {
-  background-color: #333;
-  }
-  .password-manager {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #ccc;
-  }
-  .report-page {
-  display: none;
-  text-align: center;
-  padding: 50px;
-  position: relative;
-  }
-  .report-button {
-  display: block;
-  width: 200px;
-  margin: 20px auto;
-  background-color: #e57373; /* Softer red */
-  color: white;
-  padding: 15px;
-  border-radius: 8px;
-  text-decoration: none;
-  font-size: 1.2em;
-  }
-  .report-button:hover {
-  background-color: #cc4444;
-  }
-  .close-button {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background-color: #e57373; /* Softer red */
-  color: white;
-  border: none;
-  border-radius: 5px; /* Rounded corners for a square */
-  width: 30px;
-  height: 30px;
-  font-size: 1.2em;
-  cursor: pointer;
-  /* Flexbox for perfect centering of the 'X' */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  }
-  .inactive-manager {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #ccc;
-  }
-  #shopOwnerInactiveToggle {
-  display: none;
-  }
-  .search-container {
-  position: relative;
-  display: flex;
-  width: 100%;
-  max-width: 500px;
-  margin: 0 auto;
-  }
-  #search-term {
-  flex-grow: 1;
-  padding-right: 70px; /* Make space for the button */
-  }
-  #search-toggle-btn {
-  position: absolute;
-  right: 5px;
-  top: 50%;
-  transform: translateY(-50%);
-  padding: 5px 10px;
-  border-radius: 5px;
-  font-size: 0.9em;
-  background-color: #f0f0f0;
-  color: #555;
-  transition: background-color 0.3s ease;
-  }
-  #search-toggle-btn.shop-mode {
-  background-color: #42a5f5; /* A light blue for shop mode */
-  color: white;
-  }
-  </style>
- </head>
- <body>
-
-  <div id="main-view">
-  <button id="adminBtn">Admin</button>
-  <h1>Nixie Bot</h1>
-
-  <div class="controls">
-  <div class="search-container">
-  <input type="text" id="search-term" placeholder="Search item name..." />
-  <button id="search-toggle-btn" onclick="toggleSearchMode()">Shop</button>
-  </div>
-  <button onclick="performSearch()">Search</button>
-  <button onclick="sortItems('alphabetical')">Sort A–Z</button>
-  <button onclick="sortItems('price')">Sort by Price</button>
-  </div>
-
-  <div id="adminPanel">
-  <h3>Paste Items Below</h3>
-  <textarea id="adminInput" placeholder="Format: Shop > [Quantity] Item [for] Price Currency (or 'Free')"></textarea><br>
-  <button onclick="addItems()">Add Items</button>
-
-  <div class="password-manager" id="password-manager-section">
-  <h3>Manage Admin Accounts</h3>
-  <input type="text" id="newPassword" placeholder="New Password" />
-  <input type="text" id="permsShops" placeholder="Shops (comma-separated, e.g., Ikea,Zenith)" />
-  <button onclick="addAdminAccount()">Add Admin</button>
-  <div id="admin-accounts" style="margin-top: 10px;"></div>
-  </div>
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics.js";
   
-  <div id="mainAdminInactiveToggle" class="inactive-manager" style="display: none;">
-  <h3>Shop Inactive Mode (Main Admin)</h3>
-  <input type="text" id="shopNameInactive" placeholder="Enter shop name" />
-  <button onclick="toggleShopInactiveStatus()">Toggle Inactive Status</button>
-  </div>
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyBiI3NhWiKzLQT441TkwBJKoD5Dqw5wNWk",
+    authDomain: "nixie-bot.firebaseapp.com",
+    projectId: "nixie-bot",
+    storageBucket: "nixie-bot.firebasestorage.app",
+    messagingSenderId: "285490694055",
+    appId: "1:285490694055:web:d39ac21d99a8e16052d882",
+    measurementId: "G-YBDQ23Z555"
+  };
 
-  <div id="shopOwnerInactiveToggle" class="inactive-manager">
-  <h3>My Shop Status</h3>
-  <button id="toggleMyStatusBtn" onclick="toggleMyShopInactiveStatus()">Toggle Inactive Status</button>
-  </div>
-  </div>
-
-  <div id="item-list"></div>
-  </div>
-
-  <div id="report-view" class="report-page">
-  <button class="close-button" onclick="closeReportPage()">X</button>
-  <h2>Report a Problem</h2>
-  <p>You are reporting an issue for the item: <span id="report-item-name"></span> from shop: <span id="report-shop-name"></span>.</p>
-  <button class="report-button" id="broken-shop-btn" onclick="reportProblem('broken')">Report Broken Shop</button>
-  <button class="report-button" id="out-of-stock-btn" onclick="reportProblem('outOfStock')">Report Out of Stock</button>
-  </div>
-
-  <script type="module">
-  // --- FIREBASE SDK SNIPPET ---
-  // You must paste your Firebase SDK snippet here. It should look like this:
-  //
-  // import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-  // const firebaseConfig = { ... };
-  // const app = initializeApp(firebaseConfig);
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
 
   // You also need to add the Firebase Firestore library and initialize the database
   import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
@@ -724,7 +485,4 @@
     await loadAllData();
     renderItems(shopItems);
   })();
-  </script>
-
- </body>
- </html>
+</script>
