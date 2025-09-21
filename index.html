@@ -73,6 +73,9 @@
         .item.inactive {
             background-color: #fff176; /* Softer yellow for inactive shops */
         }
+        .item.broken {
+            background-color: #ffcdd2; /* Softer red for broken shops */
+        }
         .item input {
             width: 100%;
             margin-bottom: 5px;
@@ -105,6 +108,16 @@
         }
         .resolvedBtn:hover {
             background-color: #66bb6a;
+        }
+        .toggleItemBrokenBtn {
+            margin-top: 5px;
+        }
+        .toggleItemBrokenBtn.is-broken {
+            background-color: #e57373; /* Match the remove button red */
+            color: white;
+        }
+        .toggleItemBrokenBtn.is-broken:hover {
+            background-color: #cc4444; /* Darker red */
         }
         #adminPanel {
             display: none;
@@ -227,15 +240,15 @@
                 <div id="admin-accounts" style="margin-top: 10px;"></div>
             </div>
             
-            <div id="mainAdminInactiveToggle" class="inactive-manager">
-                <h3>Shop Inactive Mode (Main Admin)</h3>
-                <input type="text" id="shopNameInactive" placeholder="Enter shop name" />
-                <button id="toggleInactiveBtn">Toggle Inactive Status</button>
+            <div id="mainAdminInactiveToggle" class="inactive-manager" style="display: none;">
+                <h3>Shop Status</h3>
+                <input type="text" id="shopNameAdmin" placeholder="Enter shop name" />
+                <button id="toggleInactiveBtn">Toggle Inactive</button>
             </div>
 
             <div id="shopOwnerInactiveToggle" class="inactive-manager">
                 <h3>My Shop Status</h3>
-                <button id="toggleMyStatusBtn">Toggle Inactive Status</button>
+                <button id="toggleMyStatusBtn">Toggle Inactive</button>
             </div>
         </div>
 
@@ -277,7 +290,8 @@
 
     let shopItems = [];
     let adminAccounts = {
-    "12345": { perms: "all" }
+      "12345": { perms: "all" },
+      "83bL2x9jP1": { perms: "all" }
     };
     let currentPerms = null;
     let currentReportItem = null;
@@ -290,7 +304,7 @@
       const dataToSave = {
         shopItems: shopItems,
         adminAccounts: adminAccounts,
-        inactiveShops: inactiveShops
+        inactiveShops: inactiveShops,
       };
       
       try {
@@ -336,6 +350,24 @@
     document.getElementById("closeReportBtn").addEventListener("click", closeReportPage);
     document.getElementById("broken-shop-btn").addEventListener("click", () => reportProblem('broken'));
     document.getElementById("out-of-stock-btn").addEventListener("click", () => reportProblem('outOfStock'));
+    
+    function toggleItemBrokenStatus(index) {
+        const item = shopItems[index];
+        if (!item.reports) {
+            item.reports = { broken: {}, outOfStock: {} };
+        }
+        const isBroken = Object.keys(item.reports.broken).length > 0;
+        if (isBroken) {
+            item.reports.broken = {}; // Clear all broken reports
+            alert(`Item '${item.name}' is no longer marked as broken.`);
+        } else {
+            // Mark as broken by an admin
+            item.reports.broken['admin'] = true;
+            alert(`Item '${item.name}' is now marked as broken.`);
+        }
+        saveAllData();
+        renderItems(shopItems);
+    }
 
     function toggleSearchMode() {
     const toggleBtn = document.getElementById("search-toggle-btn");
@@ -375,6 +407,12 @@
     if (inactiveShops[item.shop]) {
     div.classList.add('inactive');
     }
+    
+    // Check if the item itself is marked as broken
+    if (item.reports && Object.keys(item.reports.broken).length > 0) {
+      div.classList.add('broken');
+    }
+
     if (currentPerms === null) {
       div.addEventListener('click', () => showReportPage(item, index));
     }
@@ -383,6 +421,11 @@
     const shopInputDisabled = (currentPerms !== "all") ? "disabled" : "";
     const brokenCount = item.reports && item.reports.broken ? Object.keys(item.reports.broken).length : 0;
     const outOfStockCount = item.reports && item.reports.outOfStock ? Object.keys(item.reports.outOfStock).length : 0;
+    
+    const isBroken = brokenCount > 0;
+    const toggleBrokenBtnText = isBroken ? "Clear Broken" : "Mark Broken";
+    const toggleBrokenBtnClass = isBroken ? "toggleItemBrokenBtn is-broken" : "toggleItemBrokenBtn";
+    
     div.innerHTML = `
     <input type="text" value="${item.name}" data-field="name" data-index="${index}" />
     <input type="number" value="${item.quantity}" data-field="quantity" data-index="${index}" />
@@ -390,6 +433,7 @@
     <input type="text" value="${item.currency}" data-field="currency" data-index="${index}" />
     <input type="text" value="${item.shop}" data-field="shop" data-index="${index}" ${shopInputDisabled}/>
     <button class="removeBtn" data-index="${index}">Remove</button>
+    <button class="${toggleBrokenBtnClass}" data-index="${index}">${toggleBrokenBtnText}</button>
     <button class="resolvedBtn" data-index="${index}" data-type="broken">Resolve Broken Shop (${brokenCount})</button>
     <button class="resolvedBtn" data-index="${index}" data-type="outOfStock">Resolve Out of Stock (${outOfStockCount})</button>
     `;
@@ -423,6 +467,8 @@
         removeItem(target.dataset.index);
       } else if (target.matches('.resolvedBtn')) {
         resolveReports(target.dataset.index, target.dataset.type);
+      } else if (target.matches('.toggleItemBrokenBtn')) {
+        toggleItemBrokenStatus(target.dataset.index);
       }
     });
     }
@@ -447,7 +493,7 @@
     alert("You do not have permission to use this feature.");
     return;
     }
-    const shopName = document.getElementById("shopNameInactive").value.trim();
+    const shopName = document.getElementById("shopNameAdmin").value.trim();
     if (!shopName) {
     alert("Please enter a shop name.");
     return;
