@@ -250,17 +250,61 @@
   <button class="report-button" id="out-of-stock-btn" onclick="reportProblem('outOfStock')">Report Out of Stock</button>
   </div>
 
-  <script>
+  <script type="module">
+  // --- FIREBASE SDK SNIPPET ---
+  // You must paste your Firebase SDK snippet here. It should look like this:
+  //
+  // import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+  // const firebaseConfig = { ... };
+  // const app = initializeApp(firebaseConfig);
+
+  // You also need to add the Firebase Firestore library and initialize the database
+  import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+  const db = getFirestore(app);
+
   let shopItems = [];
   let adminAccounts = {
   "12345": { perms: "all" }
   };
   let currentPerms = null;
   let currentReportItem = null;
-  const userId = Math.random().toString(36).substring(2, 15); // Simple unique ID for each user session
+  const userId = Math.random().toString(36).substring(2, 15);
   let inactiveShops = {};
-  let isShopSearch = false; // Initial search mode is item search
+  let isShopSearch = false;
+  
+  // --- SERVER-SIDE FUNCTIONS ---
+  async function saveAllData() {
+    const dataToSave = {
+      shopItems: shopItems,
+      adminAccounts: adminAccounts,
+      inactiveShops: inactiveShops
+    };
+    
+    try {
+      await setDoc(doc(db, "shop-data", "main-data"), dataToSave);
+      console.log("Data saved to Firestore!");
+    } catch (e) {
+      console.error("Error saving data: ", e);
+    }
+  }
+  
+  async function loadAllData() {
+    const docRef = doc(db, "shop-data", "main-data");
+    try {
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        shopItems = data.shopItems || [];
+        adminAccounts = Object.assign(adminAccounts, data.adminAccounts);
+        inactiveShops = data.inactiveShops || {};
+      }
+    } catch (e) {
+      console.error("Error loading data: ", e);
+    }
+  }
 
+  // --- MAIN APPLICATION LOGIC ---
+  
   // Attach search function to Enter key
   document.getElementById("search-term").addEventListener("keydown", function(event) {
   if (event.key === "Enter") {
@@ -374,6 +418,7 @@
   inactiveShops[shopName] = true;
   alert(`${shopName} is now inactive.`);
   }
+  saveAllData();
   renderItems(shopItems);
   }
 
@@ -408,6 +453,7 @@
   alert("Your shop(s) are now inactive.");
   }
 
+  saveAllData();
   renderItems(shopItems);
   }
 
@@ -457,6 +503,7 @@
   shopItems[itemIndex].reports[type][userId] = true;
   alert(`Thank you for your report! The issue has been noted.`);
   closeReportPage();
+  saveAllData();
   renderItems(shopItems);
   }
 
@@ -471,6 +518,7 @@
   }
   item.reports[type] = {};
   alert(`Reports for ${item.name} from ${item.shop} (${type}) have been resolved.`);
+  saveAllData();
   renderItems(shopItems);
   }
 
@@ -498,6 +546,7 @@
   if (newPass && perms.length > 0) {
   adminAccounts[newPass] = { perms: perms };
   alert("New admin account created!");
+  saveAllData();
   renderAdminAccounts();
   } else {
   alert("Please enter a password and at least one shop.");
@@ -523,11 +572,13 @@
   } else {
   shopItems[index][field] = value.trim();
   }
+  saveAllData();
   renderItems(shopItems);
   }
 
   function removeItem(index) {
   shopItems.splice(index, 1);
+  saveAllData();
   renderItems(shopItems);
   }
 
@@ -623,6 +674,7 @@
   });
 
   document.getElementById("adminInput").value = "";
+  saveAllData();
   renderItems(shopItems);
   }
 
@@ -666,8 +718,12 @@
   }
   };
 
-  // Initial render to show items for non-admin view
-  renderItems(shopItems);
+  // --- INITIAL PAGE LOAD ---
+  // Load data from Firestore when the page first loads
+  (async () => {
+    await loadAllData();
+    renderItems(shopItems);
+  })();
   </script>
 
  </body>
