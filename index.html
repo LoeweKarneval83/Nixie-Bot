@@ -110,6 +110,8 @@
              background-color: #66bb6a;
          }
          .toggleItemBrokenBtn {
+             background-color: black;
+             color: white;
              margin-top: 5px;
          }
          .toggleItemBrokenBtn.is-broken {
@@ -209,14 +211,6 @@
              background-color: #42a5f5; /* A light blue for shop mode */
              color: white;
          }
-         .mark-broken-btn {
-             background-color: black;
-             color: white;
-         }
-         .mark-broken-btn.is-broken {
-             background-color: #e57373; /* Red */
-             color: white;
-         }
      </style>
  </head>
  <body>
@@ -304,6 +298,7 @@
      const userId = Math.random().toString(36).substring(2, 15);
      let inactiveShops = {};
      let isShopSearch = false;
+     let isToggling = false;
      
      // --- SERVER-SIDE FUNCTIONS ---
      async function saveAllData() {
@@ -360,22 +355,32 @@
      document.getElementById("out-of-stock-btn").addEventListener("click", () => reportProblem('outOfStock'));
      
      function toggleItemBrokenStatus(index) {
-         const item = shopItems[index];
-         if (!item.reports) {
-             item.reports = { broken: {}, outOfStock: {} };
-         }
-         const isBroken = Object.keys(item.reports.broken).length > 0;
-         if (isBroken) {
-             item.reports.broken = {}; // Clear all broken reports
-             alert(`Item '${item.name}' is no longer marked as broken.`);
-         } else {
-             // Mark as broken by an admin
-             item.reports.broken['admin'] = true;
-             alert(`Item '${item.name}' is now marked as broken.`);
-         }
-         saveAllData();
-         renderItems(shopItems);
-     }
+        if (isToggling) {
+            return;
+        }
+        isToggling = true;
+
+        const item = shopItems[index];
+        if (!item.reports) {
+            item.reports = { broken: {}, outOfStock: {} };
+        }
+
+        const isBroken = Object.keys(item.reports.broken).length > 0;
+        if (isBroken) {
+            item.reports.broken = {};
+            alert(`Item '${item.name}' is no longer marked as broken.`);
+        } else {
+            item.reports.broken['admin'] = true;
+            alert(`Item '${item.name}' is now marked as broken.`);
+        }
+
+        saveAllData();
+        renderItems(shopItems);
+
+        setTimeout(() => {
+            isToggling = false;
+        }, 1000); // 1-second cooldown
+    }
  
      function toggleSearchMode() {
      const toggleBtn = document.getElementById("search-toggle-btn");
@@ -431,17 +436,15 @@
      const outOfStockCount = item.reports && item.reports.outOfStock ? Object.keys(item.reports.outOfStock).length : 0;
      
      const isBroken = brokenCount > 0;
-     const toggleBrokenBtnText = isBroken ? "Clear Broken" : "Mark Broken";
-     const toggleBrokenBtnClass = isBroken ? "mark-broken-btn is-broken" : "mark-broken-btn";
      
      div.innerHTML = `
          <input type="text" value="${item.name}" data-field="name" data-index="${index}" />
          <input type="number" value="${item.quantity}" data-field="quantity" data-index="${index}" />
          <input type="text" value="${item.price}" data-field="price" data-index="${index}" />
-         <input type="text" value="${item.currency}" data-field="currency" data-index="${index}" />
+         <input type="text" value="${item.currency}" data-field="currency" data-index="${index}" ${shopInputDisabled}/>
          <input type="text" value="${item.shop}" data-field="shop" data-index="${index}" ${shopInputDisabled}/>
          <button class="removeBtn" data-index="${index}">Remove</button>
-         <button class="${toggleBrokenBtnClass}" data-index="${index}">${toggleBrokenBtnText}</button>
+         <button class="toggleItemBrokenBtn ${isBroken ? 'is-broken' : ''}" data-index="${index}">${isBroken ? 'Clear Broken' : 'Mark Broken'}</button>
          <button class="resolvedBtn" data-index="${index}" data-type="broken">Resolve Broken Shop (${brokenCount})</button>
          <button class="resolvedBtn" data-index="${index}" data-type="outOfStock">Resolve Out of Stock (${outOfStockCount})</button>
          `;
@@ -475,7 +478,7 @@
          removeItem(target.dataset.index);
        } else if (target.matches('.resolvedBtn')) {
          resolveReports(target.dataset.index, target.dataset.type);
-       } else if (target.matches('.mark-broken-btn')) {
+       } else if (target.matches('.toggleItemBrokenBtn')) {
          toggleItemBrokenStatus(target.dataset.index);
        }
      });
