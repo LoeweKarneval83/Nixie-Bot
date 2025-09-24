@@ -13,7 +13,7 @@
         body {
             font-family: 'Segoe UI', sans-serif;
             padding: 20px;
-            background: linear-gradient(135deg, #e0f7fa, #f5f5f5); /* Less saturated gradient */
+            background: linear-gradient(135deg, #e0f7fa, #f5f5f5);
             background-repeat: no-repeat;
             background-attachment: fixed;
             color: #333;
@@ -24,8 +24,8 @@
             margin-bottom: 20px;
             font-size: 2.5em;
             text-align: center;
-            color: black; /* Changed Nixie Bot heading to black */
-            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; /* Black outline */
+            color: black;
+            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
         }
         .controls {
             display: flex;
@@ -71,10 +71,10 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
         .item.inactive {
-            background-color: #fff176; /* Softer yellow for inactive shops */
+            background-color: #fff176;
         }
         .item.broken {
-            background-color: #ffcdd2; /* Softer red for broken shops */
+            background-color: #ffcdd2;
         }
         .item input {
             width: 100%;
@@ -96,14 +96,14 @@
         }
         .item .removeBtn {
             margin-top: 10px;
-            background-color: #e57373; /* Softer red */
+            background-color: #e57373;
             color: white;
         }
         .item .removeBtn:hover {
             background-color: #cc4444;
         }
         .resolvedBtn {
-            background-color: #81c784; /* Softer green */
+            background-color: #81c784;
             margin-right: 5px;
         }
         .resolvedBtn:hover {
@@ -115,11 +115,11 @@
             margin-top: 5px;
         }
         .toggleItemBrokenBtn.is-broken {
-            background-color: #e57373; /* Match the remove button red */
+            background-color: #e57373;
             color: white;
         }
         .toggleItemBrokenBtn.is-broken:hover {
-            background-color: #cc4444; /* Darker red */
+            background-color: #cc4444;
         }
         #adminPanel {
             display: none;
@@ -149,7 +149,7 @@
             display: block;
             width: 200px;
             margin: 20px auto;
-            background-color: #e57373; /* Softer red */
+            background-color: #e57373;
             color: white;
             padding: 15px;
             border-radius: 8px;
@@ -163,15 +163,14 @@
             position: absolute;
             top: 10px;
             right: 10px;
-            background-color: #e57373; /* Softer red */
+            background-color: #e57373;
             color: white;
             border: none;
-            border-radius: 5px; /* Rounded corners for a square */
+            border-radius: 5px;
             width: 30px;
             height: 30px;
             font-size: 1.2em;
             cursor: pointer;
-            /* Flexbox for perfect centering of the 'X' */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -193,7 +192,7 @@
         }
         #search-term {
             flex-grow: 1;
-            padding-right: 70px; /* Make space for the button */
+            padding-right: 70px;
         }
         #search-toggle-btn {
             position: absolute;
@@ -208,7 +207,7 @@
             transition: background-color 0.3s ease;
         }
         #search-toggle-btn.shop-mode {
-            background-color: #42a5f5; /* A light blue for shop mode */
+            background-color: #42a5f5;
             color: white;
         }
         
@@ -235,29 +234,45 @@
         }
         .vote-controls {
             display: flex;
-            justify-content: flex-end;
-            gap: 5px;
+            justify-content: center;
+            align-items: center;
+            gap: 0;
             margin-top: 10px;
         }
-        .vote-controls button {
-            width: 40px;
-            height: 40px;
-            padding: 0;
-            font-size: 1.2em;
+        .vote-slider {
+            display: flex;
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: inset 0 0 0 1px #ccc;
         }
-        .upvote-btn {
-            background-color: #81c784;
-            color: white;
+        .vote-slider button {
+            flex: 1;
+            padding: 8px 0;
+            font-size: 1.0em;
+            font-weight: bold;
+            color: #555;
+            background-color: transparent;
+            border: none;
+            transition: background-color 0.3s, color 0.3s;
+            cursor: pointer;
         }
-        .downvote-btn {
+        .vote-slider button:hover {
+            background-color: #f0f0f0;
+        }
+        .vote-slider button.disliked-active {
             background-color: #e57373;
             color: white;
         }
-        .upvote-btn.voted {
-            background-color: #4caf50;
+        .vote-slider button.liked-active {
+            background-color: #81c784;
+            color: white;
         }
-        .downvote-btn.voted {
-            background-color: #f44336;
+        .vote-slider button:first-child {
+            border-right: 1px solid #ccc;
+        }
+        .vote-slider button:last-child {
+            border-left: 1px solid #ccc;
         }
         .suggestion-form {
             margin-top: 20px;
@@ -347,8 +362,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics.js";
     
-    // Your web app's Firebase configuration
-    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
     const firebaseConfig = {
      apiKey: "AIzaSyBiI3NhWiKzLQT441TkwBJKoD5Dqw5wNWk",
      authDomain: "nixie-bot.firebaseapp.com",
@@ -359,11 +372,9 @@
      measurementId: "G-YBDQ23Z555"
     };
 
-    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const analytics = getAnalytics(app);
 
-    // You also need to add the Firebase Firestore library and initialize the database
     import { getFirestore, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
     const db = getFirestore(app);
 
@@ -376,7 +387,7 @@
     let inactiveShops = {};
     let isShopSearch = false;
     let isToggling = false;
-    let suggestions = []; // New array for suggestions
+    let suggestions = [];
     
     // --- SERVER-SIDE FUNCTIONS ---
     async function saveAllData() {
@@ -385,7 +396,7 @@
             adminAccounts: adminAccounts,
             inactiveShops: inactiveShops,
             mainAdminPassword: mainAdminPassword,
-            suggestions: suggestions // Save the suggestions
+            suggestions: suggestions
         };
         
         try {
@@ -406,7 +417,7 @@
                 adminAccounts = Object.assign({}, data.adminAccounts);
                 inactiveShops = data.inactiveShops || {};
                 mainAdminPassword = data.mainAdminPassword || null;
-                suggestions = data.suggestions || []; // Load the suggestions
+                suggestions = data.suggestions || [];
             }
         } catch (e) {
             console.error("Error loading data: ", e);
@@ -414,14 +425,11 @@
     }
 
     // --- MAIN APPLICATION LOGIC ---
-    
-    // Attach search function to Enter key
     document.getElementById("search-term").addEventListener("keydown", function(event) {
         if (event.key === "Enter") {
             performSearch();
         }
     });
-
     document.getElementById("search-toggle-btn").addEventListener("click", toggleSearchMode);
     document.getElementById("search-btn").addEventListener("click", performSearch);
     document.getElementById("sort-alpha-btn").addEventListener("click", () => sortItems('alphabetical'));
@@ -433,8 +441,6 @@
     document.getElementById("closeReportBtn").addEventListener("click", closeReportPage);
     document.getElementById("broken-shop-btn").addEventListener("click", () => reportProblem('broken'));
     document.getElementById("out-of-stock-btn").addEventListener("click", () => reportProblem('outOfStock'));
-    
-    // New Event Listeners for Suggestions
     document.getElementById("suggestions-btn").addEventListener("click", showSuggestionsPage);
     document.getElementById("closeSuggestionsBtn").addEventListener("click", closeSuggestionsPage);
     document.getElementById("submit-suggestion-btn").addEventListener("click", submitSuggestion);
@@ -444,12 +450,10 @@
             return;
         }
         isToggling = true;
-
         const item = shopItems[index];
         if (!item.reports) {
             item.reports = { broken: {}, outOfStock: {} };
         }
-
         const isBroken = Object.keys(item.reports.broken).length > 0;
         if (isBroken) {
             item.reports.broken = {};
@@ -458,20 +462,17 @@
             item.reports.broken['admin'] = true;
             alert(`Item '${item.name}' is now marked as broken.`);
         }
-
         saveAllData();
         renderItems(shopItems);
-
         setTimeout(() => {
             isToggling = false;
-        }, 1000); // 1-second cooldown
+        }, 1000);
     }
 
     function toggleSearchMode() {
         const toggleBtn = document.getElementById("search-toggle-btn");
         const searchInput = document.getElementById("search-term");
         isShopSearch = !isShopSearch;
-
         if (isShopSearch) {
             toggleBtn.textContent = "Item";
             toggleBtn.classList.add("shop-mode");
@@ -486,42 +487,33 @@
     function renderItems(items) {
         const itemList = document.getElementById("item-list");
         itemList.innerHTML = "";
-
         const filteredItems = items.filter(item => {
             if (currentPerms === null) return true;
             if (currentPerms === "all") return true;
             if (currentPerms && currentPerms.includes(item.shop)) return true;
             return false;
         });
-
         if (filteredItems.length === 0) {
             itemList.innerHTML = "<p>No items to display.</p>";
             return;
         }
-
         filteredItems.forEach((item, index) => {
             const div = document.createElement("div");
             div.className = "item";
             if (inactiveShops[item.shop]) {
                 div.classList.add('inactive');
             }
-            
-            // Check if the item itself is marked as broken
             if (item.reports && Object.keys(item.reports.broken).length > 0) {
                 div.classList.add('broken');
             }
-
             if (currentPerms === null) {
                 div.addEventListener('click', () => showReportPage(item, index));
             }
-
-            if (currentPerms) { // Admin view
+            if (currentPerms) {
                 const shopInputDisabled = (currentPerms !== "all") ? "disabled" : "";
                 const brokenCount = item.reports && item.reports.broken ? Object.keys(item.reports.broken).length : 0;
                 const outOfStockCount = item.reports && item.reports.outOfStock ? Object.keys(item.reports.outOfStock).length : 0;
-                
                 const isBroken = brokenCount > 0;
-                
                 div.innerHTML = `
                     <input type="text" value="${item.name}" data-field="name" data-index="${index}" />
                     <input type="number" value="${item.quantity}" data-field="quantity" data-index="${index}" />
@@ -533,7 +525,7 @@
                     <button class="resolvedBtn" data-index="${index}" data-type="broken">Resolve Broken Shop (${brokenCount})</button>
                     <button class="resolvedBtn" data-index="${index}" data-type="outOfStock">Resolve Out of Stock (${outOfStockCount})</button>
                     `;
-            } else { // Public view
+            } else {
                 const priceDisplay = typeof item.price === 'number' ? item.price : 'Free';
                 div.innerHTML = `
                     <span><strong>${item.name}</strong></span>
@@ -543,11 +535,8 @@
                     <span>Shop: ${item.shop}</span>
                     `;
             }
-
             itemList.appendChild(div);
         });
-        
-        // Add event listeners for dynamic items
         itemList.addEventListener('change', (e) => {
             const target = e.target;
             if (target.matches('input[data-index]')) {
@@ -556,7 +545,6 @@
                 updateItem(index, field, target.value);
             }
         });
-        
         itemList.addEventListener('click', (e) => {
             const target = e.target;
             if (target.matches('.removeBtn')) {
@@ -572,15 +560,11 @@
     function performSearch() {
         const term = document.getElementById("search-term").value.toLowerCase();
         let filtered = [];
-        
         if (isShopSearch) {
-            // Shop search (exact match)
             filtered = shopItems.filter(item => item.shop.toLowerCase() === term);
         } else {
-            // Item search (partial match)
             filtered = shopItems.filter(item => item.name.toLowerCase().includes(term));
         }
-        
         renderItems(filtered);
     }
     
@@ -594,7 +578,6 @@
             alert("Please enter a shop name.");
             return;
         }
-        
         if (inactiveShops[shopName]) {
             delete inactiveShops[shopName];
             alert(`${shopName} is now active.`);
@@ -611,7 +594,6 @@
             alert("You do not have permission to use this feature.");
             return;
         }
-        
         const myShops = currentPerms;
         let allInactive = true;
         myShops.forEach(shop => {
@@ -619,7 +601,6 @@
                 allInactive = false;
             }
         });
-
         myShops.forEach(shop => {
             if (allInactive) {
                 delete inactiveShops[shop];
@@ -627,7 +608,6 @@
                 inactiveShops[shop] = true;
             }
         });
-
         const button = document.getElementById("toggleMyStatusBtn");
         if (allInactive) {
             button.textContent = "Set My Shop Inactive";
@@ -636,7 +616,6 @@
             button.textContent = "Set My Shop Active";
             alert("Your shop(s) are now inactive.");
         }
-
         saveAllData();
         renderItems(shopItems);
     }
@@ -644,21 +623,18 @@
     function updateMyToggleButton() {
         const button = document.getElementById("toggleMyStatusBtn");
         if (!currentPerms || currentPerms === "all") return;
-
         let allInactive = true;
         currentPerms.forEach(shop => {
             if (!inactiveShops[shop]) {
                 allInactive = false;
             }
         });
-
         if (allInactive) {
             button.textContent = "Set My Shop Active";
         } else {
             button.textContent = "Set My Shop Inactive";
         }
     }
-
 
     function showReportPage(item, index) {
         document.getElementById("main-view").style.display = "none";
@@ -671,7 +647,7 @@
     function closeReportPage() {
         document.getElementById("report-view").style.display = "none";
         document.getElementById("main-view").style.display = "block";
-        currentReportItem = null; // Clear the selected item
+        currentReportItem = null;
     }
 
     function reportProblem(type) {
@@ -683,7 +659,6 @@
             alert("You have already reported this issue.");
             return;
         }
-
         shopItems[itemIndex].reports[type][userId] = true;
         alert("Thank you for your report! The issue has been noted.");
         closeReportPage();
@@ -721,10 +696,8 @@
             alert("You do not have permission to add new accounts.");
             return;
         }
-
         const newPass = document.getElementById("newPassword").value.trim();
         const perms = document.getElementById("permsShops").value.split(",").map(s => s.trim());
-
         if (newPass && perms.length > 0) {
             adminAccounts[newPass] = { perms: perms };
             alert("New admin account created!");
@@ -739,7 +712,7 @@
         if (field === 'price') {
             if (value.toLowerCase().trim() === 'free') {
                 shopItems[index][field] = 'Free';
-                shopItems[index]['currency'] = ''; // Clear currency for free items
+                shopItems[index]['currency'] = '';
             } else {
                 const num = parseInt(value);
                 if (!isNaN(num)) {
@@ -786,34 +759,27 @@
     function addItems() {
         const input = document.getElementById("adminInput").value;
         const lines = input.split("\n").filter(line => line.trim() !== '');
-
         lines.forEach(line => {
             const parts = line.split('>');
             if (parts.length < 2) {
                 alert(`Invalid format for item: "${line}". Missing '>' separator.`);
                 return;
             }
-
             const shop = parts[0].trim();
             let rest = parts.slice(1).join('>').trim();
-
             if (currentPerms !== "all" && currentPerms && !currentPerms.includes(shop)) {
                 alert(`You can only add items for your assigned shop(s): ${currentPerms.join(", ")}`);
                 return;
             }
-
             let price = null;
             let currency = null;
             let priceFound = false;
-
-            // First, check for "free"
             if (rest.toLowerCase().endsWith(' free')) {
                 price = 'Free';
                 currency = '';
                 rest = rest.slice(0, rest.length - 5).trim();
                 priceFound = true;
             } else {
-                // NEW: Use regex to find the last number and everything after it
                 const priceMatch = rest.match(/\s(\d+)\s+(.+)$/);
                 if (priceMatch) {
                     price = parseInt(priceMatch[1]);
@@ -822,39 +788,30 @@
                     priceFound = true;
                 }
             }
-
             if (!priceFound) {
                 alert(`Could not parse price for item: "${line}". Use format: Shop > [Qty] Item [for] Price Currency (or Free)`);
                 return;
             }
-
-            // Check for optional "for" at the end of the remaining string
             if (rest.toLowerCase().endsWith(' for')) {
                 rest = rest.slice(0, rest.length - 4).trim();
             }
-
-            // Now, parse [Quantity] and Item Name from what's left
-            let quantity = 1; // Default quantity
+            let quantity = 1;
             let name = rest;
-
             const qtyMatch = rest.match(/^(\d+(\s+stack)?)\s+/i);
             if (qtyMatch) {
                 const qtyRaw = qtyMatch[1];
                 quantity = qtyRaw.toLowerCase().includes("stack") ? parseInt(qtyRaw) * 64 : parseInt(qtyRaw);
                 name = rest.substring(qtyMatch[0].length).trim();
             }
-
             if (!name) {
                 alert(`Invalid format: missing item name for "${line}".`);
                 return;
             }
-
             shopItems.push({ shop, quantity, name, price, currency, reports: { broken: {}, outOfStock: {} } });
             if (inactiveShops[shop] === undefined) {
                 inactiveShops[shop] = false;
             }
         });
-
         document.getElementById("adminInput").value = "";
         saveAllData();
         renderItems(shopItems);
@@ -864,7 +821,6 @@
         const mainAdminPanel = document.getElementById("mainAdminInactiveToggle");
         const shopOwnerPanel = document.getElementById("shopOwnerInactiveToggle");
         const passwordManager = document.getElementById("password-manager-section");
-
         if (currentPerms !== null) {
             currentPerms = null;
             document.getElementById("adminBtn").textContent = "Admin";
@@ -875,23 +831,19 @@
             renderItems(shopItems);
             return;
         }
-
         if (mainAdminPassword === null) {
             const newPass = prompt("No main admin password set. Please enter a new password:");
             if (newPass) {
                 mainAdminPassword = newPass;
                 await saveAllData();
                 alert("Main admin password set successfully! Please log in.");
-                // Re-trigger login attempt
                 document.getElementById("adminBtn").click();
             } else {
                 alert("Password not set. Aborting.");
             }
             return;
         }
-
         const password = prompt("Enter admin password:");
-
         if (password === mainAdminPassword) {
             currentPerms = "all";
             document.getElementById("adminPanel").style.display = "block";
@@ -916,7 +868,6 @@
     });
 
     // --- NEW SUGGESTION FUNCTIONS ---
-
     function showSuggestionsPage() {
         document.getElementById("main-view").style.display = "none";
         document.getElementById("suggestions-view").style.display = "block";
@@ -931,19 +882,15 @@
     function renderSuggestions() {
         const feed = document.getElementById("suggestion-feed");
         feed.innerHTML = "";
-
-        // Sort suggestions by net votes (upvotes - downvotes)
         const sortedSuggestions = suggestions.sort((a, b) => {
             const aScore = Object.keys(a.upvotes).length - Object.keys(a.downvotes).length;
             const bScore = Object.keys(b.upvotes).length - Object.keys(b.downvotes).length;
             return bScore - aScore;
         });
-
         if (sortedSuggestions.length === 0) {
             feed.innerHTML = "<p>No suggestions yet. Be the first to add one!</p>";
             return;
         }
-
         sortedSuggestions.forEach(suggestion => {
             const div = document.createElement("div");
             div.className = "suggestion-item";
@@ -951,28 +898,63 @@
             const downvotes = Object.keys(suggestion.downvotes).length;
             const netScore = upvotes - downvotes;
 
-            const upvotedClass = suggestion.upvotes[userId] ? 'voted' : '';
-            const downvotedClass = suggestion.downvotes[userId] ? 'voted' : '';
+            let likedClass = '';
+            let dislikedClass = '';
 
+            if (suggestion.upvotes[userId]) {
+                likedClass = 'liked-active';
+            } else if (suggestion.downvotes[userId]) {
+                dislikedClass = 'disliked-active';
+            }
+            
             div.innerHTML = `
                 <span class="suggestion-score">${netScore}</span>
                 <p>${suggestion.text}</p>
                 <div class="vote-controls">
-                    <button class="upvote-btn ${upvotedClass}" data-id="${suggestion.id}">👍</button>
-                    <button class="downvote-btn ${downvotedClass}" data-id="${suggestion.id}">👎</button>
+                    <div class="vote-slider" data-id="${suggestion.id}">
+                        <button class="${dislikedClass}" data-vote="down">👎</button>
+                        <button class="${likedClass}" data-vote="up">👍</button>
+                    </div>
                 </div>
             `;
             feed.appendChild(div);
         });
+        
+        const sliders = document.querySelectorAll('.vote-slider');
+        sliders.forEach(slider => {
+            slider.addEventListener('click', (e) => {
+                const suggestionId = slider.dataset.id;
+                const voteType = e.target.dataset.vote;
+                
+                const suggestion = suggestions.find(s => s.id === suggestionId);
+                if (!suggestion) return;
 
-        // Add event listeners to the new buttons
-        feed.addEventListener('click', (e) => {
-            const target = e.target;
-            if (target.matches('.upvote-btn')) {
-                toggleVote(target.dataset.id, 'upvote');
-            } else if (target.matches('.downvote-btn')) {
-                toggleVote(target.dataset.id, 'downvote');
-            }
+                const hasLiked = suggestion.upvotes[userId];
+                const hasDisliked = suggestion.downvotes[userId];
+
+                if (voteType === 'up') {
+                    if (hasLiked) {
+                        // User is removing their like vote
+                        delete suggestion.upvotes[userId];
+                    } else {
+                        // User is casting a new like vote
+                        delete suggestion.downvotes[userId];
+                        suggestion.upvotes[userId] = true;
+                    }
+                } else if (voteType === 'down') {
+                    if (hasDisliked) {
+                        // User is removing their dislike vote
+                        delete suggestion.downvotes[userId];
+                    } else {
+                        // User is casting a new dislike vote
+                        delete suggestion.upvotes[userId];
+                        suggestion.downvotes[userId] = true;
+                    }
+                }
+                
+                saveAllData();
+                renderSuggestions();
+            });
         });
     }
 
@@ -983,14 +965,12 @@
             alert("Please enter a suggestion.");
             return;
         }
-
         const newSuggestion = {
             id: Date.now().toString(),
             text: text,
             upvotes: {},
             downvotes: {}
         };
-
         suggestions.push(newSuggestion);
         input.value = "";
         alert("Suggestion submitted!");
@@ -998,32 +978,7 @@
         renderSuggestions();
     }
 
-    function toggleVote(suggestionId, type) {
-        const suggestion = suggestions.find(s => s.id === suggestionId);
-        if (!suggestion) return;
-
-        if (type === 'upvote') {
-            if (suggestion.upvotes[userId]) {
-                delete suggestion.upvotes[userId];
-            } else {
-                suggestion.upvotes[userId] = true;
-                delete suggestion.downvotes[userId];
-            }
-        } else if (type === 'downvote') {
-            if (suggestion.downvotes[userId]) {
-                delete suggestion.downvotes[userId];
-            } else {
-                suggestion.downvotes[userId] = true;
-                delete suggestion.upvotes[userId];
-            }
-        }
-
-        saveAllData();
-        renderSuggestions();
-    }
-
     // --- INITIAL PAGE LOAD ---
-    // Load data from Firestore when the page first loads
     (async () => {
         await loadAllData();
         renderItems(shopItems);
