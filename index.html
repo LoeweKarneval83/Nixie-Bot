@@ -1,360 +1,445 @@
 <!DOCTYPE html>
- <html lang="en">
- <head>
-     <meta charset="UTF-8" />
-     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-     <title>Nixie Bot</title>
-     <style>
-         html, body {
-             height: 100%;
-             margin: 0;
-             padding: 0;
-         }
-         body {
-             font-family: 'Segoe UI', sans-serif;
-             padding: 20px;
-             background: linear-gradient(135deg, #e0f7fa, #f5f5f5); /* Less saturated gradient */
-             background-repeat: no-repeat;
-             background-attachment: fixed;
-             color: #333;
-             min-height: 100vh;
-             box-sizing: border-box;
-         }
-         h1 {
-             margin-bottom: 20px;
-             font-size: 2.5em;
-             text-align: center;
-             color: black; /* Changed Nixie Bot heading to black */
-             text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; /* Black outline */
-         }
-         .controls {
-             display: flex;
-             flex-wrap: wrap;
-             gap: 10px;
-             margin-bottom: 20px;
-             justify-content: center;
-         }
-         input[type="text"], textarea, input[type="number"] {
-             padding: 10px;
-             font-size: 1em;
-             border: 1px solid #ccc;
-             border-radius: 5px;
-             flex: 1;
-             min-width: 200px;
-         }
-         button {
-             padding: 10px 15px;
-             font-size: 1em;
-             border: none;
-             border-radius: 5px;
-             background-color: black;
-             color: white;
-             cursor: pointer;
-         }
-         button:hover {
-             background-color: #333;
-         }
-         #item-list {
-             display: grid;
-             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-             gap: 15px;
-         }
-         .item {
-             background: #fff;
-             border-radius: 8px;
-             padding: 15px;
-             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-             transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-         }
-         .item:hover {
-             transform: scale(1.03);
-             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-         }
-         .item.inactive {
-             background-color: #fff176; /* Softer yellow for inactive shops */
-         }
-         .item.broken {
-             background-color: #ffcdd2; /* Softer red for broken shops */
-         }
-         .item input {
-             width: 100%;
-             margin-bottom: 5px;
-             padding: 6px;
-             font-size: 1em;
-             border: 1px solid #ccc;
-             border-radius: 4px;
-             box-sizing: border-box;
-         }
-         .item span, .item button {
-             display: block;
-             margin: 5px 0;
-             cursor: pointer;
-             color: black;
-         }
-         .item span:hover {
-             text-decoration: none;
-         }
-         .item .removeBtn {
-             margin-top: 10px;
-             background-color: #e57373; /* Softer red */
-             color: white;
-         }
-         .item .removeBtn:hover {
-             background-color: #cc4444;
-         }
-         .resolvedBtn {
-             background-color: #81c784; /* Softer green */
-             margin-right: 5px;
-         }
-         .resolvedBtn:hover {
-             background-color: #66bb6a;
-         }
-         .toggleItemBrokenBtn {
-             background-color: black;
-             color: white;
-             margin-top: 5px;
-         }
-         .toggleItemBrokenBtn.is-broken {
-             background-color: #e57373; /* Match the remove button red */
-             color: white;
-         }
-         .toggleItemBrokenBtn.is-broken:hover {
-             background-color: #cc4444; /* Darker red */
-         }
-         #adminPanel {
-             display: none;
-             margin-top: 20px;
-         }
-         #adminBtn {
-             position: absolute;
-             top: 20px;
-             right: 20px;
-             background-color: black;
-         }
-         #adminBtn:hover {
-             background-color: #333;
-         }
-         .password-manager {
-             margin-top: 20px;
-             padding-top: 20px;
-             border-top: 1px solid #ccc;
-         }
-         .report-page {
-             display: none;
-             text-align: center;
-             padding: 50px;
-             position: relative;
-         }
-         .report-button {
-             display: block;
-             width: 200px;
-             margin: 20px auto;
-             background-color: #e57373; /* Softer red */
-             color: white;
-             padding: 15px;
-             border-radius: 8px;
-             text-decoration: none;
-             font-size: 1.2em;
-         }
-         .report-button:hover {
-             background-color: #cc4444;
-         }
-         .close-button {
-             position: absolute;
-             top: 10px;
-             right: 10px;
-             background-color: #e57373; /* Softer red */
-             color: white;
-             border: none;
-             border-radius: 5px; /* Rounded corners for a square */
-             width: 30px;
-             height: 30px;
-             font-size: 1.2em;
-             cursor: pointer;
-             /* Flexbox for perfect centering of the 'X' */
-             display: flex;
-             justify-content: center;
-             align-items: center;
-         }
-         .inactive-manager {
-             margin-top: 20px;
-             padding-top: 20px;
-             border-top: 1px solid #ccc;
-         }
-         #shopOwnerInactiveToggle {
-             display: none;
-         }
-         .search-container {
-             position: relative;
-             display: flex;
-             width: 100%;
-             max-width: 500px;
-             margin: 0 auto;
-         }
-         #search-term {
-             flex-grow: 1;
-             padding-right: 70px; /* Make space for the button */
-         }
-         #search-toggle-btn {
-             position: absolute;
-             right: 5px;
-             top: 50%;
-             transform: translateY(-50%);
-             padding: 5px 10px;
-             border-radius: 5px;
-             font-size: 0.9em;
-             background-color: #f0f0f0;
-             color: #555;
-             transition: background-color 0.3s ease;
-         }
-         #search-toggle-btn.shop-mode {
-             background-color: #42a5f5; /* A light blue for shop mode */
-             color: white;
-         }
-     </style>
- </head>
- <body>
- 
-     <div id="main-view">
-         <button id="adminBtn">Admin</button>
-         <h1>Nixie Bot</h1>
- 
-         <div class="controls">
-             <div class="search-container">
-                 <input type="text" id="search-term" placeholder="Search item name..." />
-                 <button id="search-toggle-btn">Shop</button>
-             </div>
-             <button id="search-btn">Search</button>
-             <button id="sort-alpha-btn">Sort A–Z</button>
-             <button id="sort-price-btn">Sort by Price</button>
-         </div>
- 
-         <div id="adminPanel">
-             <h3>Paste Items Below</h3>
-             <textarea id="adminInput" placeholder="Format: Shop > [Quantity] Item [for] Price Currency (or 'Free')"></textarea><br>
-             <button id="addItemsBtn">Add Items</button>
- 
-             <div class="password-manager" id="password-manager-section">
-                 <h3>Manage Admin Accounts</h3>
-                 <input type="text" id="newPassword" placeholder="New Password" />
-                 <input type="text" id="permsShops" placeholder="Shops (comma-separated, e.g., Ikea,Zenith)" />
-                 <button id="addAdminBtn">Add Admin</button>
-                 <div id="admin-accounts" style="margin-top: 10px;"></div>
-             </div>
-             
-             <div id="mainAdminInactiveToggle" class="inactive-manager" style="display: none;">
-                 <h3>Shop Status</h3>
-                 <input type="text" id="shopNameAdmin" placeholder="Enter shop name" />
-                 <button id="toggleInactiveBtn">Toggle Inactive</button>
-             </div>
- 
-             <div id="shopOwnerInactiveToggle" class="inactive-manager">
-                 <h3>My Shop Status</h3>
-                 <button id="toggleMyStatusBtn">Toggle Inactive</button>
-             </div>
-         </div>
- 
-         <div id="item-list"></div>
-     </div>
- 
-     <div id="report-view" class="report-page">
-         <button id="closeReportBtn" class="close-button">X</button>
-         <h2>Report a Problem</h2>
-         <p>You are reporting an issue for the item: <span id="report-item-name"></span> from shop: <span id="report-shop-name"></span>.</p>
-         <button id="broken-shop-btn" class="report-button">Report Broken Shop</button>
-         <button id="out-of-stock-btn" class="report-button">Report Out of Stock</button>
-     </div>
- 
- <script type="module">
-     // Import the functions you need from the SDKs you need
-     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-     import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics.js";
-     
-     // Your web app's Firebase configuration
-     // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-     const firebaseConfig = {
-      apiKey: "AIzaSyBiI3NhWiKzLQT441TkwBJKoD5Dqw5wNWk",
-      authDomain: "nixie-bot.firebaseapp.com",
-      projectId: "nixie-bot",
-      storageBucket: "nixie-bot.firebasestorage.app",
-      messagingSenderId: "285490694055",
-      appId: "1:285490694055:web:d39ac21d99a8e16052d882",
-      measurementId: "G-YBDQ23Z555"
-     };
- 
-     // Initialize Firebase
-     const app = initializeApp(firebaseConfig);
-     const analytics = getAnalytics(app);
- 
-     // You also need to add the Firebase Firestore library and initialize the database
-     import { getFirestore, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
-     const db = getFirestore(app);
- 
-     let shopItems = [];
-     let adminAccounts = {};
-     let mainAdminPassword = null;
-     let currentPerms = null;
-     let currentReportItem = null;
-     const userId = Math.random().toString(36).substring(2, 15);
-     let inactiveShops = {};
-     let isShopSearch = false;
-     let isToggling = false;
-     
-     // --- SERVER-SIDE FUNCTIONS ---
-     async function saveAllData() {
-       const dataToSave = {
-         shopItems: shopItems,
-         adminAccounts: adminAccounts,
-         inactiveShops: inactiveShops,
-         mainAdminPassword: mainAdminPassword,
-       };
-       
-       try {
-         await setDoc(doc(db, "shop-data", "main-data"), dataToSave);
-         console.log("Data saved to Firestore!");
-       } catch (e) {
-         console.error("Error saving data: ", e);
-       }
-     }
-     
-     async function loadAllData() {
-       const docRef = doc(db, "shop-data", "main-data");
-       try {
-         const docSnap = await getDoc(docRef);
-         if (docSnap.exists()) {
-           const data = docSnap.data();
-           shopItems = data.shopItems || [];
-           adminAccounts = Object.assign({}, data.adminAccounts);
-           inactiveShops = data.inactiveShops || {};
-           mainAdminPassword = data.mainAdminPassword || null;
-         }
-       } catch (e) {
-         console.error("Error loading data: ", e);
-       }
-     }
- 
-     // --- MAIN APPLICATION LOGIC ---
-     
-     // Attach search function to Enter key
-     document.getElementById("search-term").addEventListener("keydown", function(event) {
-     if (event.key === "Enter") {
-     performSearch();
-     }
-     });
- 
-     document.getElementById("search-toggle-btn").addEventListener("click", toggleSearchMode);
-     document.getElementById("search-btn").addEventListener("click", performSearch);
-     document.getElementById("sort-alpha-btn").addEventListener("click", () => sortItems('alphabetical'));
-     document.getElementById("sort-price-btn").addEventListener("click", () => sortItems('price'));
-     document.getElementById("addItemsBtn").addEventListener("click", addItems);
-     document.getElementById("addAdminBtn").addEventListener("click", addAdminAccount);
-     document.getElementById("toggleInactiveBtn").addEventListener("click", toggleShopInactiveStatus);
-     document.getElementById("toggleMyStatusBtn").addEventListener("click", toggleMyShopInactiveStatus);
-     document.getElementById("closeReportBtn").addEventListener("click", closeReportPage);
-     document.getElementById("broken-shop-btn").addEventListener("click", () => reportProblem('broken'));
-     document.getElementById("out-of-stock-btn").addEventListener("click", () => reportProblem('outOfStock'));
-     
-     function toggleItemBrokenStatus(index) {
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Nixie Bot</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #e0f7fa, #f5f5f5); /* Less saturated gradient */
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            color: #333;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        h1 {
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            text-align: center;
+            color: black; /* Changed Nixie Bot heading to black */
+            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; /* Black outline */
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        input[type="text"], textarea, input[type="number"] {
+            padding: 10px;
+            font-size: 1em;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            flex: 1;
+            min-width: 200px;
+        }
+        button {
+            padding: 10px 15px;
+            font-size: 1em;
+            border: none;
+            border-radius: 5px;
+            background-color: black;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #333;
+        }
+        #item-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        .item {
+            background: #fff;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+        }
+        .item:hover {
+            transform: scale(1.03);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        .item.inactive {
+            background-color: #fff176; /* Softer yellow for inactive shops */
+        }
+        .item.broken {
+            background-color: #ffcdd2; /* Softer red for broken shops */
+        }
+        .item input {
+            width: 100%;
+            margin-bottom: 5px;
+            padding: 6px;
+            font-size: 1em;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .item span, .item button {
+            display: block;
+            margin: 5px 0;
+            cursor: pointer;
+            color: black;
+        }
+        .item span:hover {
+            text-decoration: none;
+        }
+        .item .removeBtn {
+            margin-top: 10px;
+            background-color: #e57373; /* Softer red */
+            color: white;
+        }
+        .item .removeBtn:hover {
+            background-color: #cc4444;
+        }
+        .resolvedBtn {
+            background-color: #81c784; /* Softer green */
+            margin-right: 5px;
+        }
+        .resolvedBtn:hover {
+            background-color: #66bb6a;
+        }
+        .toggleItemBrokenBtn {
+            background-color: black;
+            color: white;
+            margin-top: 5px;
+        }
+        .toggleItemBrokenBtn.is-broken {
+            background-color: #e57373; /* Match the remove button red */
+            color: white;
+        }
+        .toggleItemBrokenBtn.is-broken:hover {
+            background-color: #cc4444; /* Darker red */
+        }
+        #adminPanel {
+            display: none;
+            margin-top: 20px;
+        }
+        #adminBtn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: black;
+        }
+        #adminBtn:hover {
+            background-color: #333;
+        }
+        .password-manager {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #ccc;
+        }
+        .report-page, .suggestions-page {
+            display: none;
+            text-align: center;
+            padding: 50px;
+            position: relative;
+        }
+        .report-button {
+            display: block;
+            width: 200px;
+            margin: 20px auto;
+            background-color: #e57373; /* Softer red */
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 1.2em;
+        }
+        .report-button:hover {
+            background-color: #cc4444;
+        }
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #e57373; /* Softer red */
+            color: white;
+            border: none;
+            border-radius: 5px; /* Rounded corners for a square */
+            width: 30px;
+            height: 30px;
+            font-size: 1.2em;
+            cursor: pointer;
+            /* Flexbox for perfect centering of the 'X' */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .inactive-manager {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #ccc;
+        }
+        #shopOwnerInactiveToggle {
+            display: none;
+        }
+        .search-container {
+            position: relative;
+            display: flex;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        #search-term {
+            flex-grow: 1;
+            padding-right: 70px; /* Make space for the button */
+        }
+        #search-toggle-btn {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            background-color: #f0f0f0;
+            color: #555;
+            transition: background-color 0.3s ease;
+        }
+        #search-toggle-btn.shop-mode {
+            background-color: #42a5f5; /* A light blue for shop mode */
+            color: white;
+        }
+        
+        /* New styles for Suggestions page */
+        .suggestions-page {
+            padding: 20px;
+        }
+        .suggestion-feed {
+            margin-top: 20px;
+            display: grid;
+            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        }
+        .suggestion-item {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+        .suggestion-item p {
+            margin: 0;
+            white-space: pre-wrap;
+        }
+        .vote-controls {
+            display: flex;
+            justify-content: flex-end;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        .vote-controls button {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            font-size: 1.2em;
+        }
+        .upvote-btn {
+            background-color: #81c784;
+            color: white;
+        }
+        .downvote-btn {
+            background-color: #e57373;
+            color: white;
+        }
+        .upvote-btn.voted {
+            background-color: #4caf50;
+        }
+        .downvote-btn.voted {
+            background-color: #f44336;
+        }
+        .suggestion-form {
+            margin-top: 20px;
+        }
+        .suggestion-form textarea {
+            width: calc(100% - 20px);
+            height: 100px;
+            margin-bottom: 10px;
+        }
+        .suggestion-score {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-weight: bold;
+            font-size: 1.5em;
+            color: black;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="main-view">
+        <button id="adminBtn">Admin</button>
+        <h1>Nixie Bot</h1>
+
+        <div class="controls">
+            <div class="search-container">
+                <input type="text" id="search-term" placeholder="Search item name..." />
+                <button id="search-toggle-btn">Shop</button>
+            </div>
+            <button id="search-btn">Search</button>
+            <button id="sort-alpha-btn">Sort A–Z</button>
+            <button id="sort-price-btn">Sort by Price</button>
+            <button id="suggestions-btn">Suggestions</button>
+        </div>
+
+        <div id="adminPanel">
+            <h3>Paste Items Below</h3>
+            <textarea id="adminInput" placeholder="Format: Shop > [Quantity] Item [for] Price Currency (or 'Free')"></textarea><br>
+            <button id="addItemsBtn">Add Items</button>
+
+            <div class="password-manager" id="password-manager-section">
+                <h3>Manage Admin Accounts</h3>
+                <input type="text" id="newPassword" placeholder="New Password" />
+                <input type="text" id="permsShops" placeholder="Shops (comma-separated, e.g., Ikea,Zenith)" />
+                <button id="addAdminBtn">Add Admin</button>
+                <div id="admin-accounts" style="margin-top: 10px;"></div>
+            </div>
+            
+            <div id="mainAdminInactiveToggle" class="inactive-manager" style="display: none;">
+                <h3>Shop Status</h3>
+                <input type="text" id="shopNameAdmin" placeholder="Enter shop name" />
+                <button id="toggleInactiveBtn">Toggle Inactive</button>
+            </div>
+
+            <div id="shopOwnerInactiveToggle" class="inactive-manager">
+                <h3>My Shop Status</h3>
+                <button id="toggleMyStatusBtn">Toggle Inactive</button>
+            </div>
+        </div>
+
+        <div id="item-list"></div>
+    </div>
+
+    <div id="report-view" class="report-page">
+        <button id="closeReportBtn" class="close-button">X</button>
+        <h2>Report a Problem</h2>
+        <p>You are reporting an issue for the item: <span id="report-item-name"></span> from shop: <span id="report-shop-name"></span>.</p>
+        <button id="broken-shop-btn" class="report-button">Report Broken Shop</button>
+        <button id="out-of-stock-btn" class="report-button">Report Out of Stock</button>
+    </div>
+
+    <div id="suggestions-view" class="suggestions-page">
+        <button id="closeSuggestionsBtn" class="close-button">X</button>
+        <h2>Suggestions Feed</h2>
+        <div class="suggestion-feed" id="suggestion-feed"></div>
+
+        <div class="suggestion-form">
+            <h3>Submit Your Own Suggestion</h3>
+            <textarea id="suggestion-input" placeholder="Type your suggestion here..."></textarea>
+            <button id="submit-suggestion-btn">Submit Suggestion</button>
+        </div>
+    </div>
+
+<script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics.js";
+    
+    // Your web app's Firebase configuration
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+    const firebaseConfig = {
+     apiKey: "AIzaSyBiI3NhWiKzLQT441TkwBJKoD5Dqw5wNWk",
+     authDomain: "nixie-bot.firebaseapp.com",
+     projectId: "nixie-bot",
+     storageBucket: "nixie-bot.firebasestorage.app",
+     messagingSenderId: "285490694055",
+     appId: "1:285490694055:web:d39ac21d99a8e16052d882",
+     measurementId: "G-YBDQ23Z555"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+
+    // You also need to add the Firebase Firestore library and initialize the database
+    import { getFirestore, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    const db = getFirestore(app);
+
+    let shopItems = [];
+    let adminAccounts = {};
+    let mainAdminPassword = null;
+    let currentPerms = null;
+    let currentReportItem = null;
+    const userId = Math.random().toString(36).substring(2, 15);
+    let inactiveShops = {};
+    let isShopSearch = false;
+    let isToggling = false;
+    let suggestions = []; // New array for suggestions
+    
+    // --- SERVER-SIDE FUNCTIONS ---
+    async function saveAllData() {
+        const dataToSave = {
+            shopItems: shopItems,
+            adminAccounts: adminAccounts,
+            inactiveShops: inactiveShops,
+            mainAdminPassword: mainAdminPassword,
+            suggestions: suggestions // Save the suggestions
+        };
+        
+        try {
+            await setDoc(doc(db, "shop-data", "main-data"), dataToSave);
+            console.log("Data saved to Firestore!");
+        } catch (e) {
+            console.error("Error saving data: ", e);
+        }
+    }
+    
+    async function loadAllData() {
+        const docRef = doc(db, "shop-data", "main-data");
+        try {
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                shopItems = data.shopItems || [];
+                adminAccounts = Object.assign({}, data.adminAccounts);
+                inactiveShops = data.inactiveShops || {};
+                mainAdminPassword = data.mainAdminPassword || null;
+                suggestions = data.suggestions || []; // Load the suggestions
+            }
+        } catch (e) {
+            console.error("Error loading data: ", e);
+        }
+    }
+
+    // --- MAIN APPLICATION LOGIC ---
+    
+    // Attach search function to Enter key
+    document.getElementById("search-term").addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+            performSearch();
+        }
+    });
+
+    document.getElementById("search-toggle-btn").addEventListener("click", toggleSearchMode);
+    document.getElementById("search-btn").addEventListener("click", performSearch);
+    document.getElementById("sort-alpha-btn").addEventListener("click", () => sortItems('alphabetical'));
+    document.getElementById("sort-price-btn").addEventListener("click", () => sortItems('price'));
+    document.getElementById("addItemsBtn").addEventListener("click", addItems);
+    document.getElementById("addAdminBtn").addEventListener("click", addAdminAccount);
+    document.getElementById("toggleInactiveBtn").addEventListener("click", toggleShopInactiveStatus);
+    document.getElementById("toggleMyStatusBtn").addEventListener("click", toggleMyShopInactiveStatus);
+    document.getElementById("closeReportBtn").addEventListener("click", closeReportPage);
+    document.getElementById("broken-shop-btn").addEventListener("click", () => reportProblem('broken'));
+    document.getElementById("out-of-stock-btn").addEventListener("click", () => reportProblem('outOfStock'));
+    
+    // New Event Listeners for Suggestions
+    document.getElementById("suggestions-btn").addEventListener("click", showSuggestionsPage);
+    document.getElementById("closeSuggestionsBtn").addEventListener("click", closeSuggestionsPage);
+    document.getElementById("submit-suggestion-btn").addEventListener("click", submitSuggestion);
+
+    function toggleItemBrokenStatus(index) {
         if (isToggling) {
             return;
         }
@@ -381,461 +466,568 @@
             isToggling = false;
         }, 1000); // 1-second cooldown
     }
- 
-     function toggleSearchMode() {
-     const toggleBtn = document.getElementById("search-toggle-btn");
-     const searchInput = document.getElementById("search-term");
-     isShopSearch = !isShopSearch;
- 
-     if (isShopSearch) {
-     toggleBtn.textContent = "Item";
-     toggleBtn.classList.add("shop-mode");
-     searchInput.placeholder = "Search shop name...";
-     } else {
-     toggleBtn.textContent = "Shop";
-     toggleBtn.classList.remove("shop-mode");
-     searchInput.placeholder = "Search item name...";
-     }
-     }
- 
-     function renderItems(items) {
-     const itemList = document.getElementById("item-list");
-     itemList.innerHTML = "";
- 
-     const filteredItems = items.filter(item => {
-     if (currentPerms === null) return true;
-     if (currentPerms === "all") return true;
-     if (currentPerms && currentPerms.includes(item.shop)) return true;
-     return false;
-     });
- 
-     if (filteredItems.length === 0) {
-     itemList.innerHTML = "<p>No items to display.</p>";
-     return;
-     }
- 
-     filteredItems.forEach((item, index) => {
-     const div = document.createElement("div");
-     div.className = "item";
-     if (inactiveShops[item.shop]) {
-     div.classList.add('inactive');
-     }
-     
-     // Check if the item itself is marked as broken
-     if (item.reports && Object.keys(item.reports.broken).length > 0) {
-       div.classList.add('broken');
-     }
- 
-     if (currentPerms === null) {
-       div.addEventListener('click', () => showReportPage(item, index));
-     }
- 
-     if (currentPerms) { // Admin view
-     const shopInputDisabled = (currentPerms !== "all") ? "disabled" : "";
-     const brokenCount = item.reports && item.reports.broken ? Object.keys(item.reports.broken).length : 0;
-     const outOfStockCount = item.reports && item.reports.outOfStock ? Object.keys(item.reports.outOfStock).length : 0;
-     
-     const isBroken = brokenCount > 0;
-     
-     div.innerHTML = `
-         <input type="text" value="${item.name}" data-field="name" data-index="${index}" />
-         <input type="number" value="${item.quantity}" data-field="quantity" data-index="${index}" />
-         <input type="text" value="${item.price}" data-field="price" data-index="${index}" />
-         <input type="text" value="${item.currency}" data-field="currency" data-index="${index}" ${shopInputDisabled}/>
-         <input type="text" value="${item.shop}" data-field="shop" data-index="${index}" ${shopInputDisabled}/>
-         <button class="removeBtn" data-index="${index}">Remove</button>
-         <button class="toggleItemBrokenBtn ${isBroken ? 'is-broken' : ''}" data-index="${index}">${isBroken ? 'Clear Broken' : 'Mark Broken'}</button>
-         <button class="resolvedBtn" data-index="${index}" data-type="broken">Resolve Broken Shop (${brokenCount})</button>
-         <button class="resolvedBtn" data-index="${index}" data-type="outOfStock">Resolve Out of Stock (${outOfStockCount})</button>
-         `;
-     } else { // Public view
-     const priceDisplay = typeof item.price === 'number' ? item.price : 'Free';
-     div.innerHTML = `
-         <span><strong>${item.name}</strong></span>
-         <span>Quantity: ${item.quantity}</span>
-         <span>Price: ${priceDisplay}</span>
-         <span>Currency: ${item.currency}</span>
-         <span>Shop: ${item.shop}</span>
-         `;
-     }
- 
-     itemList.appendChild(div);
-     });
-     
-     // Add event listeners for dynamic items
-     itemList.addEventListener('change', (e) => {
-       const target = e.target;
-       if (target.matches('input[data-index]')) {
-         const index = target.dataset.index;
-         const field = target.dataset.field;
-         updateItem(index, field, target.value);
-       }
-     });
-     
-     itemList.addEventListener('click', (e) => {
-       const target = e.target;
-       if (target.matches('.removeBtn')) {
-         removeItem(target.dataset.index);
-       } else if (target.matches('.resolvedBtn')) {
-         resolveReports(target.dataset.index, target.dataset.type);
-       } else if (target.matches('.toggleItemBrokenBtn')) {
-         toggleItemBrokenStatus(target.dataset.index);
-       }
-     });
-     }
- 
-     function performSearch() {
-     const term = document.getElementById("search-term").value.toLowerCase();
-     let filtered = [];
-     
-     if (isShopSearch) {
-     // Shop search (exact match)
-     filtered = shopItems.filter(item => item.shop.toLowerCase() === term);
-     } else {
-     // Item search (partial match)
-     filtered = shopItems.filter(item => item.name.toLowerCase().includes(term));
-     }
-     
-     renderItems(filtered);
-     }
-     
-     function toggleShopInactiveStatus() {
-     if (currentPerms !== "all") {
-     alert("You do not have permission to use this feature.");
-     return;
-     }
-     const shopName = document.getElementById("shopNameAdmin").value.trim();
-     if (!shopName) {
-     alert("Please enter a shop name.");
-     return;
-     }
-     
-     if (inactiveShops[shopName]) {
-     delete inactiveShops[shopName];
-     alert(`${shopName} is now active.`);
-     } else {
-     inactiveShops[shopName] = true;
-     alert(`${shopName} is now inactive.`);
-     }
-     saveAllData();
-     renderItems(shopItems);
-     }
- 
-     function toggleMyShopInactiveStatus() {
-     if (currentPerms === "all" || currentPerms === null) {
-     alert("You do not have permission to use this feature.");
-     return;
-     }
-     
-     const myShops = currentPerms;
-     let allInactive = true;
-     myShops.forEach(shop => {
-     if (!inactiveShops[shop]) {
-     allInactive = false;
-     }
-     });
- 
-     myShops.forEach(shop => {
-     if (allInactive) {
-     delete inactiveShops[shop];
-     } else {
-     inactiveShops[shop] = true;
-     }
-     });
- 
-     const button = document.getElementById("toggleMyStatusBtn");
-     if (allInactive) {
-     button.textContent = "Set My Shop Inactive";
-     alert("Your shop(s) are now active.");
-     } else {
-     button.textContent = "Set My Shop Active";
-     alert("Your shop(s) are now inactive.");
-     }
- 
-     saveAllData();
-     renderItems(shopItems);
-     }
- 
-     function updateMyToggleButton() {
-     const button = document.getElementById("toggleMyStatusBtn");
-     if (!currentPerms || currentPerms === "all") return;
- 
-     let allInactive = true;
-     currentPerms.forEach(shop => {
-     if (!inactiveShops[shop]) {
-     allInactive = false;
-     }
-     });
- 
-     if (allInactive) {
-     button.textContent = "Set My Shop Active";
-     } else {
-     button.textContent = "Set My Shop Inactive";
-     }
-     }
- 
- 
-     function showReportPage(item, index) {
-     document.getElementById("main-view").style.display = "none";
-     document.getElementById("report-view").style.display = "block";
-     document.getElementById("report-item-name").textContent = item.name;
-     document.getElementById("report-shop-name").textContent = item.shop;
-     currentReportItem = index;
-     }
- 
-     function closeReportPage() {
-     document.getElementById("report-view").style.display = "none";
-     document.getElementById("main-view").style.display = "block";
-     currentReportItem = null; // Clear the selected item
-     }
- 
-     function reportProblem(type) {
-     const itemIndex = currentReportItem;
-     if (!shopItems[itemIndex].reports) {
-     shopItems[itemIndex].reports = { broken: {}, outOfStock: {} };
-     }
-     if (shopItems[itemIndex].reports[type][userId]) {
-     alert("You have already reported this issue.");
-     return;
-     }
- 
-     shopItems[itemIndex].reports[type][userId] = true;
-     alert("Thank you for your report! The issue has been noted.");
-     closeReportPage();
-     saveAllData();
-     renderItems(shopItems);
-     }
- 
-     function resolveReports(index, type) {
-     const item = shopItems[index];
-     if (currentPerms !== "all" && !currentPerms.includes(item.shop)) {
-     alert("You do not have permission to resolve reports for this shop.");
-     return;
-     }
-     if (!item.reports) {
-     return;
-     }
-     item.reports[type] = {};
-     alert(`Reports for ${item.name} from ${item.shop} (${type}) have been resolved.`);
-     saveAllData();
-     renderItems(shopItems);
-     }
- 
-     function renderAdminAccounts() {
-     const accountList = document.getElementById("admin-accounts");
-     accountList.innerHTML = "<h4>Admin Accounts:</h4>";
-     for (const password in adminAccounts) {
-     const p = document.createElement("p");
-     p.textContent = `Password: ${password} | Perms: ${adminAccounts[password].perms.join(", ")}`;
-     accountList.appendChild(p);
-     }
-     }
- 
-     function addAdminAccount() {
-     if (currentPerms !== "all") {
-     alert("You do not have permission to add new accounts.");
-     return;
-     }
- 
-     const newPass = document.getElementById("newPassword").value.trim();
-     const perms = document.getElementById("permsShops").value.split(",").map(s => s.trim());
- 
-     if (newPass && perms.length > 0) {
-     adminAccounts[newPass] = { perms: perms };
-     alert("New admin account created!");
-     saveAllData();
-     renderAdminAccounts();
-     } else {
-     alert("Please enter a password and at least one shop.");
-     }
-     }
- 
-     function updateItem(index, field, value) {
-     if (field === 'price') {
-     if (value.toLowerCase().trim() === 'free') {
-     shopItems[index][field] = 'Free';
-     shopItems[index]['currency'] = ''; // Clear currency for free items
-     } else {
-     const num = parseInt(value);
-     if (!isNaN(num)) {
-     shopItems[index][field] = num;
-     }
-     }
-     } else if (field === "quantity") {
-     const num = parseInt(value);
-     if (!isNaN(num)) {
-     shopItems[index][field] = num;
-     }
-     } else {
-     shopItems[index][field] = value.trim();
-     }
-     saveAllData();
-     renderItems(shopItems);
-     }
- 
-     function removeItem(index) {
-     shopItems.splice(index, 1);
-     saveAllData();
-     renderItems(shopItems);
-     }
- 
-     function sortItems(criteria) {
-     let sorted = [...shopItems];
-     if (criteria === "alphabetical") {
-     sorted.sort((a, b) => a.name.localeCompare(b.name));
-     } else if (criteria === "price") {
-     sorted.sort((a, b) => {
-     const priceA = a.price === 'Free' ? 0 : a.price;
-     const priceB = b.price === 'Free' ? 0 : b.price;
-     return priceA - priceB;
-     });
-     }
-     renderItems(sorted);
-     }
- 
-     function filterBy(field, value) {
-     const filtered = shopItems.filter(item => String(item[field]) === value);
-     renderItems(filtered);
-     }
- 
-     function addItems() {
-     const input = document.getElementById("adminInput").value;
-     const lines = input.split("\n").filter(line => line.trim() !== '');
- 
-     lines.forEach(line => {
-     const parts = line.split('>');
-     if (parts.length < 2) {
-     alert(`Invalid format for item: "${line}". Missing '>' separator.`);
-     return;
-     }
- 
-     const shop = parts[0].trim();
-     let rest = parts.slice(1).join('>').trim();
- 
-     if (currentPerms !== "all" && currentPerms && !currentPerms.includes(shop)) {
-     alert(`You can only add items for your assigned shop(s): ${currentPerms.join(", ")}`);
-     return;
-     }
- 
-     let price = null;
-     let currency = null;
-     let priceFound = false;
- 
-     // First, check for "free"
-     if (rest.toLowerCase().endsWith(' free')) {
-     price = 'Free';
-     currency = '';
-     rest = rest.slice(0, rest.length - 5).trim();
-     priceFound = true;
-     } else {
-     // NEW: Use regex to find the last number and everything after it
-     const priceMatch = rest.match(/\s(\d+)\s+(.+)$/);
-     if (priceMatch) {
-     price = parseInt(priceMatch[1]);
-     currency = priceMatch[2].trim();
-     rest = rest.slice(0, rest.length - priceMatch[0].length).trim();
-     priceFound = true;
-     }
-     }
- 
-     if (!priceFound) {
-     alert(`Could not parse price for item: "${line}". Use format: Shop > [Qty] Item [for] Price Currency (or Free)`);
-     return;
-     }
- 
-     // Check for optional "for" at the end of the remaining string
-     if (rest.toLowerCase().endsWith(' for')) {
-     rest = rest.slice(0, rest.length - 4).trim();
-     }
- 
-     // Now, parse [Quantity] and Item Name from what's left
-     let quantity = 1; // Default quantity
-     let name = rest;
- 
-     const qtyMatch = rest.match(/^(\d+(\s+stack)?)\s+/i);
-     if (qtyMatch) {
-     const qtyRaw = qtyMatch[1];
-     quantity = qtyRaw.toLowerCase().includes("stack") ? parseInt(qtyRaw) * 64 : parseInt(qtyRaw);
-     name = rest.substring(qtyMatch[0].length).trim();
-     }
- 
-     if (!name) {
-     alert(`Invalid format: missing item name for "${line}".`);
-     return;
-     }
- 
-     shopItems.push({ shop, quantity, name, price, currency, reports: { broken: {}, outOfStock: {} } });
-     if (inactiveShops[shop] === undefined) {
-     inactiveShops[shop] = false;
-     }
-     });
- 
-     document.getElementById("adminInput").value = "";
-     saveAllData();
-     renderItems(shopItems);
-     }
- 
-     document.getElementById("adminBtn").addEventListener("click", async () => {
-       const mainAdminPanel = document.getElementById("mainAdminInactiveToggle");
-       const shopOwnerPanel = document.getElementById("shopOwnerInactiveToggle");
-       const passwordManager = document.getElementById("password-manager-section");
- 
-       if (currentPerms !== null) {
-       currentPerms = null;
-       document.getElementById("adminBtn").textContent = "Admin";
-       document.getElementById("adminPanel").style.display = "none";
-       mainAdminPanel.style.display = "none";
-       shopOwnerPanel.style.display = "none";
-       passwordManager.style.display = "none";
-       renderItems(shopItems);
-       return;
-       }
- 
-       if (mainAdminPassword === null) {
-         const newPass = prompt("No main admin password set. Please enter a new password:");
-         if (newPass) {
-           mainAdminPassword = newPass;
-           await saveAllData();
-           alert("Main admin password set successfully! Please log in.");
-           // Re-trigger login attempt
-           document.getElementById("adminBtn").click();
-         } else {
-           alert("Password not set. Aborting.");
-         }
-         return;
-       }
- 
-       const password = prompt("Enter admin password:");
- 
-       if (password === mainAdminPassword) {
-         currentPerms = "all";
-         document.getElementById("adminPanel").style.display = "block";
-         document.getElementById("adminBtn").textContent = "Log out";
-         renderItems(shopItems);
-         passwordManager.style.display = "block";
-         mainAdminPanel.style.display = "block";
-         shopOwnerPanel.style.display = "none";
-         renderAdminAccounts();
-       } else if (adminAccounts[password]) {
-         currentPerms = adminAccounts[password].perms;
-         document.getElementById("adminPanel").style.display = "block";
-         document.getElementById("adminBtn").textContent = "Log out";
-         renderItems(shopItems);
-         passwordManager.style.display = "none";
-         mainAdminPanel.style.display = "none";
-         shopOwnerPanel.style.display = "block";
-         updateMyToggleButton();
-       } else {
-         alert("Incorrect password.");
-       }
-     });
- 
-     // --- INITIAL PAGE LOAD ---
-     // Load data from Firestore when the page first loads
-     (async () => {
-       await loadAllData();
-       renderItems(shopItems);
-     })();
- </script>
- </body>
- </html>
+
+    function toggleSearchMode() {
+        const toggleBtn = document.getElementById("search-toggle-btn");
+        const searchInput = document.getElementById("search-term");
+        isShopSearch = !isShopSearch;
+
+        if (isShopSearch) {
+            toggleBtn.textContent = "Item";
+            toggleBtn.classList.add("shop-mode");
+            searchInput.placeholder = "Search shop name...";
+        } else {
+            toggleBtn.textContent = "Shop";
+            toggleBtn.classList.remove("shop-mode");
+            searchInput.placeholder = "Search item name...";
+        }
+    }
+
+    function renderItems(items) {
+        const itemList = document.getElementById("item-list");
+        itemList.innerHTML = "";
+
+        const filteredItems = items.filter(item => {
+            if (currentPerms === null) return true;
+            if (currentPerms === "all") return true;
+            if (currentPerms && currentPerms.includes(item.shop)) return true;
+            return false;
+        });
+
+        if (filteredItems.length === 0) {
+            itemList.innerHTML = "<p>No items to display.</p>";
+            return;
+        }
+
+        filteredItems.forEach((item, index) => {
+            const div = document.createElement("div");
+            div.className = "item";
+            if (inactiveShops[item.shop]) {
+                div.classList.add('inactive');
+            }
+            
+            // Check if the item itself is marked as broken
+            if (item.reports && Object.keys(item.reports.broken).length > 0) {
+                div.classList.add('broken');
+            }
+
+            if (currentPerms === null) {
+                div.addEventListener('click', () => showReportPage(item, index));
+            }
+
+            if (currentPerms) { // Admin view
+                const shopInputDisabled = (currentPerms !== "all") ? "disabled" : "";
+                const brokenCount = item.reports && item.reports.broken ? Object.keys(item.reports.broken).length : 0;
+                const outOfStockCount = item.reports && item.reports.outOfStock ? Object.keys(item.reports.outOfStock).length : 0;
+                
+                const isBroken = brokenCount > 0;
+                
+                div.innerHTML = `
+                    <input type="text" value="${item.name}" data-field="name" data-index="${index}" />
+                    <input type="number" value="${item.quantity}" data-field="quantity" data-index="${index}" />
+                    <input type="text" value="${item.price}" data-field="price" data-index="${index}" />
+                    <input type="text" value="${item.currency}" data-field="currency" data-index="${index}" ${shopInputDisabled}/>
+                    <input type="text" value="${item.shop}" data-field="shop" data-index="${index}" ${shopInputDisabled}/>
+                    <button class="removeBtn" data-index="${index}">Remove</button>
+                    <button class="toggleItemBrokenBtn ${isBroken ? 'is-broken' : ''}" data-index="${index}">${isBroken ? 'Clear Broken' : 'Mark Broken'}</button>
+                    <button class="resolvedBtn" data-index="${index}" data-type="broken">Resolve Broken Shop (${brokenCount})</button>
+                    <button class="resolvedBtn" data-index="${index}" data-type="outOfStock">Resolve Out of Stock (${outOfStockCount})</button>
+                    `;
+            } else { // Public view
+                const priceDisplay = typeof item.price === 'number' ? item.price : 'Free';
+                div.innerHTML = `
+                    <span><strong>${item.name}</strong></span>
+                    <span>Quantity: ${item.quantity}</span>
+                    <span>Price: ${priceDisplay}</span>
+                    <span>Currency: ${item.currency}</span>
+                    <span>Shop: ${item.shop}</span>
+                    `;
+            }
+
+            itemList.appendChild(div);
+        });
+        
+        // Add event listeners for dynamic items
+        itemList.addEventListener('change', (e) => {
+            const target = e.target;
+            if (target.matches('input[data-index]')) {
+                const index = target.dataset.index;
+                const field = target.dataset.field;
+                updateItem(index, field, target.value);
+            }
+        });
+        
+        itemList.addEventListener('click', (e) => {
+            const target = e.target;
+            if (target.matches('.removeBtn')) {
+                removeItem(target.dataset.index);
+            } else if (target.matches('.resolvedBtn')) {
+                resolveReports(target.dataset.index, target.dataset.type);
+            } else if (target.matches('.toggleItemBrokenBtn')) {
+                toggleItemBrokenStatus(target.dataset.index);
+            }
+        });
+    }
+
+    function performSearch() {
+        const term = document.getElementById("search-term").value.toLowerCase();
+        let filtered = [];
+        
+        if (isShopSearch) {
+            // Shop search (exact match)
+            filtered = shopItems.filter(item => item.shop.toLowerCase() === term);
+        } else {
+            // Item search (partial match)
+            filtered = shopItems.filter(item => item.name.toLowerCase().includes(term));
+        }
+        
+        renderItems(filtered);
+    }
+    
+    function toggleShopInactiveStatus() {
+        if (currentPerms !== "all") {
+            alert("You do not have permission to use this feature.");
+            return;
+        }
+        const shopName = document.getElementById("shopNameAdmin").value.trim();
+        if (!shopName) {
+            alert("Please enter a shop name.");
+            return;
+        }
+        
+        if (inactiveShops[shopName]) {
+            delete inactiveShops[shopName];
+            alert(`${shopName} is now active.`);
+        } else {
+            inactiveShops[shopName] = true;
+            alert(`${shopName} is now inactive.`);
+        }
+        saveAllData();
+        renderItems(shopItems);
+    }
+
+    function toggleMyShopInactiveStatus() {
+        if (currentPerms === "all" || currentPerms === null) {
+            alert("You do not have permission to use this feature.");
+            return;
+        }
+        
+        const myShops = currentPerms;
+        let allInactive = true;
+        myShops.forEach(shop => {
+            if (!inactiveShops[shop]) {
+                allInactive = false;
+            }
+        });
+
+        myShops.forEach(shop => {
+            if (allInactive) {
+                delete inactiveShops[shop];
+            } else {
+                inactiveShops[shop] = true;
+            }
+        });
+
+        const button = document.getElementById("toggleMyStatusBtn");
+        if (allInactive) {
+            button.textContent = "Set My Shop Inactive";
+            alert("Your shop(s) are now active.");
+        } else {
+            button.textContent = "Set My Shop Active";
+            alert("Your shop(s) are now inactive.");
+        }
+
+        saveAllData();
+        renderItems(shopItems);
+    }
+
+    function updateMyToggleButton() {
+        const button = document.getElementById("toggleMyStatusBtn");
+        if (!currentPerms || currentPerms === "all") return;
+
+        let allInactive = true;
+        currentPerms.forEach(shop => {
+            if (!inactiveShops[shop]) {
+                allInactive = false;
+            }
+        });
+
+        if (allInactive) {
+            button.textContent = "Set My Shop Active";
+        } else {
+            button.textContent = "Set My Shop Inactive";
+        }
+    }
+
+
+    function showReportPage(item, index) {
+        document.getElementById("main-view").style.display = "none";
+        document.getElementById("report-view").style.display = "block";
+        document.getElementById("report-item-name").textContent = item.name;
+        document.getElementById("report-shop-name").textContent = item.shop;
+        currentReportItem = index;
+    }
+
+    function closeReportPage() {
+        document.getElementById("report-view").style.display = "none";
+        document.getElementById("main-view").style.display = "block";
+        currentReportItem = null; // Clear the selected item
+    }
+
+    function reportProblem(type) {
+        const itemIndex = currentReportItem;
+        if (!shopItems[itemIndex].reports) {
+            shopItems[itemIndex].reports = { broken: {}, outOfStock: {} };
+        }
+        if (shopItems[itemIndex].reports[type][userId]) {
+            alert("You have already reported this issue.");
+            return;
+        }
+
+        shopItems[itemIndex].reports[type][userId] = true;
+        alert("Thank you for your report! The issue has been noted.");
+        closeReportPage();
+        saveAllData();
+        renderItems(shopItems);
+    }
+
+    function resolveReports(index, type) {
+        const item = shopItems[index];
+        if (currentPerms !== "all" && !currentPerms.includes(item.shop)) {
+            alert("You do not have permission to resolve reports for this shop.");
+            return;
+        }
+        if (!item.reports) {
+            return;
+        }
+        item.reports[type] = {};
+        alert(`Reports for ${item.name} from ${item.shop} (${type}) have been resolved.`);
+        saveAllData();
+        renderItems(shopItems);
+    }
+
+    function renderAdminAccounts() {
+        const accountList = document.getElementById("admin-accounts");
+        accountList.innerHTML = "<h4>Admin Accounts:</h4>";
+        for (const password in adminAccounts) {
+            const p = document.createElement("p");
+            p.textContent = `Password: ${password} | Perms: ${adminAccounts[password].perms.join(", ")}`;
+            accountList.appendChild(p);
+        }
+    }
+
+    function addAdminAccount() {
+        if (currentPerms !== "all") {
+            alert("You do not have permission to add new accounts.");
+            return;
+        }
+
+        const newPass = document.getElementById("newPassword").value.trim();
+        const perms = document.getElementById("permsShops").value.split(",").map(s => s.trim());
+
+        if (newPass && perms.length > 0) {
+            adminAccounts[newPass] = { perms: perms };
+            alert("New admin account created!");
+            saveAllData();
+            renderAdminAccounts();
+        } else {
+            alert("Please enter a password and at least one shop.");
+        }
+    }
+
+    function updateItem(index, field, value) {
+        if (field === 'price') {
+            if (value.toLowerCase().trim() === 'free') {
+                shopItems[index][field] = 'Free';
+                shopItems[index]['currency'] = ''; // Clear currency for free items
+            } else {
+                const num = parseInt(value);
+                if (!isNaN(num)) {
+                    shopItems[index][field] = num;
+                }
+            }
+        } else if (field === "quantity") {
+            const num = parseInt(value);
+            if (!isNaN(num)) {
+                shopItems[index][field] = num;
+            }
+        } else {
+            shopItems[index][field] = value.trim();
+        }
+        saveAllData();
+        renderItems(shopItems);
+    }
+
+    function removeItem(index) {
+        shopItems.splice(index, 1);
+        saveAllData();
+        renderItems(shopItems);
+    }
+
+    function sortItems(criteria) {
+        let sorted = [...shopItems];
+        if (criteria === "alphabetical") {
+            sorted.sort((a, b) => a.name.localeCompare(b.name));
+        } else if (criteria === "price") {
+            sorted.sort((a, b) => {
+                const priceA = a.price === 'Free' ? 0 : a.price;
+                const priceB = b.price === 'Free' ? 0 : b.price;
+                return priceA - priceB;
+            });
+        }
+        renderItems(sorted);
+    }
+
+    function filterBy(field, value) {
+        const filtered = shopItems.filter(item => String(item[field]) === value);
+        renderItems(filtered);
+    }
+
+    function addItems() {
+        const input = document.getElementById("adminInput").value;
+        const lines = input.split("\n").filter(line => line.trim() !== '');
+
+        lines.forEach(line => {
+            const parts = line.split('>');
+            if (parts.length < 2) {
+                alert(`Invalid format for item: "${line}". Missing '>' separator.`);
+                return;
+            }
+
+            const shop = parts[0].trim();
+            let rest = parts.slice(1).join('>').trim();
+
+            if (currentPerms !== "all" && currentPerms && !currentPerms.includes(shop)) {
+                alert(`You can only add items for your assigned shop(s): ${currentPerms.join(", ")}`);
+                return;
+            }
+
+            let price = null;
+            let currency = null;
+            let priceFound = false;
+
+            // First, check for "free"
+            if (rest.toLowerCase().endsWith(' free')) {
+                price = 'Free';
+                currency = '';
+                rest = rest.slice(0, rest.length - 5).trim();
+                priceFound = true;
+            } else {
+                // NEW: Use regex to find the last number and everything after it
+                const priceMatch = rest.match(/\s(\d+)\s+(.+)$/);
+                if (priceMatch) {
+                    price = parseInt(priceMatch[1]);
+                    currency = priceMatch[2].trim();
+                    rest = rest.slice(0, rest.length - priceMatch[0].length).trim();
+                    priceFound = true;
+                }
+            }
+
+            if (!priceFound) {
+                alert(`Could not parse price for item: "${line}". Use format: Shop > [Qty] Item [for] Price Currency (or Free)`);
+                return;
+            }
+
+            // Check for optional "for" at the end of the remaining string
+            if (rest.toLowerCase().endsWith(' for')) {
+                rest = rest.slice(0, rest.length - 4).trim();
+            }
+
+            // Now, parse [Quantity] and Item Name from what's left
+            let quantity = 1; // Default quantity
+            let name = rest;
+
+            const qtyMatch = rest.match(/^(\d+(\s+stack)?)\s+/i);
+            if (qtyMatch) {
+                const qtyRaw = qtyMatch[1];
+                quantity = qtyRaw.toLowerCase().includes("stack") ? parseInt(qtyRaw) * 64 : parseInt(qtyRaw);
+                name = rest.substring(qtyMatch[0].length).trim();
+            }
+
+            if (!name) {
+                alert(`Invalid format: missing item name for "${line}".`);
+                return;
+            }
+
+            shopItems.push({ shop, quantity, name, price, currency, reports: { broken: {}, outOfStock: {} } });
+            if (inactiveShops[shop] === undefined) {
+                inactiveShops[shop] = false;
+            }
+        });
+
+        document.getElementById("adminInput").value = "";
+        saveAllData();
+        renderItems(shopItems);
+    }
+
+    document.getElementById("adminBtn").addEventListener("click", async () => {
+        const mainAdminPanel = document.getElementById("mainAdminInactiveToggle");
+        const shopOwnerPanel = document.getElementById("shopOwnerInactiveToggle");
+        const passwordManager = document.getElementById("password-manager-section");
+
+        if (currentPerms !== null) {
+            currentPerms = null;
+            document.getElementById("adminBtn").textContent = "Admin";
+            document.getElementById("adminPanel").style.display = "none";
+            mainAdminPanel.style.display = "none";
+            shopOwnerPanel.style.display = "none";
+            passwordManager.style.display = "none";
+            renderItems(shopItems);
+            return;
+        }
+
+        if (mainAdminPassword === null) {
+            const newPass = prompt("No main admin password set. Please enter a new password:");
+            if (newPass) {
+                mainAdminPassword = newPass;
+                await saveAllData();
+                alert("Main admin password set successfully! Please log in.");
+                // Re-trigger login attempt
+                document.getElementById("adminBtn").click();
+            } else {
+                alert("Password not set. Aborting.");
+            }
+            return;
+        }
+
+        const password = prompt("Enter admin password:");
+
+        if (password === mainAdminPassword) {
+            currentPerms = "all";
+            document.getElementById("adminPanel").style.display = "block";
+            document.getElementById("adminBtn").textContent = "Log out";
+            renderItems(shopItems);
+            passwordManager.style.display = "block";
+            mainAdminPanel.style.display = "block";
+            shopOwnerPanel.style.display = "none";
+            renderAdminAccounts();
+        } else if (adminAccounts[password]) {
+            currentPerms = adminAccounts[password].perms;
+            document.getElementById("adminPanel").style.display = "block";
+            document.getElementById("adminBtn").textContent = "Log out";
+            renderItems(shopItems);
+            passwordManager.style.display = "none";
+            mainAdminPanel.style.display = "none";
+            shopOwnerPanel.style.display = "block";
+            updateMyToggleButton();
+        } else {
+            alert("Incorrect password.");
+        }
+    });
+
+    // --- NEW SUGGESTION FUNCTIONS ---
+
+    function showSuggestionsPage() {
+        document.getElementById("main-view").style.display = "none";
+        document.getElementById("suggestions-view").style.display = "block";
+        renderSuggestions();
+    }
+
+    function closeSuggestionsPage() {
+        document.getElementById("suggestions-view").style.display = "none";
+        document.getElementById("main-view").style.display = "block";
+    }
+
+    function renderSuggestions() {
+        const feed = document.getElementById("suggestion-feed");
+        feed.innerHTML = "";
+
+        // Sort suggestions by net votes (upvotes - downvotes)
+        const sortedSuggestions = suggestions.sort((a, b) => {
+            const aScore = Object.keys(a.upvotes).length - Object.keys(a.downvotes).length;
+            const bScore = Object.keys(b.upvotes).length - Object.keys(b.downvotes).length;
+            return bScore - aScore;
+        });
+
+        if (sortedSuggestions.length === 0) {
+            feed.innerHTML = "<p>No suggestions yet. Be the first to add one!</p>";
+            return;
+        }
+
+        sortedSuggestions.forEach(suggestion => {
+            const div = document.createElement("div");
+            div.className = "suggestion-item";
+            const upvotes = Object.keys(suggestion.upvotes).length;
+            const downvotes = Object.keys(suggestion.downvotes).length;
+            const netScore = upvotes - downvotes;
+
+            const upvotedClass = suggestion.upvotes[userId] ? 'voted' : '';
+            const downvotedClass = suggestion.downvotes[userId] ? 'voted' : '';
+
+            div.innerHTML = `
+                <span class="suggestion-score">${netScore}</span>
+                <p>${suggestion.text}</p>
+                <div class="vote-controls">
+                    <button class="upvote-btn ${upvotedClass}" data-id="${suggestion.id}">👍</button>
+                    <button class="downvote-btn ${downvotedClass}" data-id="${suggestion.id}">👎</button>
+                </div>
+            `;
+            feed.appendChild(div);
+        });
+
+        // Add event listeners to the new buttons
+        feed.addEventListener('click', (e) => {
+            const target = e.target;
+            if (target.matches('.upvote-btn')) {
+                toggleVote(target.dataset.id, 'upvote');
+            } else if (target.matches('.downvote-btn')) {
+                toggleVote(target.dataset.id, 'downvote');
+            }
+        });
+    }
+
+    function submitSuggestion() {
+        const input = document.getElementById("suggestion-input");
+        const text = input.value.trim();
+        if (!text) {
+            alert("Please enter a suggestion.");
+            return;
+        }
+
+        const newSuggestion = {
+            id: Date.now().toString(),
+            text: text,
+            upvotes: {},
+            downvotes: {}
+        };
+
+        suggestions.push(newSuggestion);
+        input.value = "";
+        alert("Suggestion submitted!");
+        saveAllData();
+        renderSuggestions();
+    }
+
+    function toggleVote(suggestionId, type) {
+        const suggestion = suggestions.find(s => s.id === suggestionId);
+        if (!suggestion) return;
+
+        if (type === 'upvote') {
+            if (suggestion.upvotes[userId]) {
+                delete suggestion.upvotes[userId];
+            } else {
+                suggestion.upvotes[userId] = true;
+                delete suggestion.downvotes[userId];
+            }
+        } else if (type === 'downvote') {
+            if (suggestion.downvotes[userId]) {
+                delete suggestion.downvotes[userId];
+            } else {
+                suggestion.downvotes[userId] = true;
+                delete suggestion.upvotes[userId];
+            }
+        }
+
+        saveAllData();
+        renderSuggestions();
+    }
+
+    // --- INITIAL PAGE LOAD ---
+    // Load data from Firestore when the page first loads
+    (async () => {
+        await loadAllData();
+        renderItems(shopItems);
+    })();
+</script>
+</body>
+</html>
