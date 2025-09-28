@@ -143,7 +143,7 @@
         #adminBtn:hover {
             background-color: #333;
         }
-        .password-manager {
+        #fullAdminControls {
             margin-top: 20px;
             padding-top: 20px;
             border-top: 1px solid #ccc;
@@ -325,31 +325,36 @@
             <textarea id="adminInput" placeholder="Format: Shop > [Quantity] Item [for] Price Currency (or 'Free')"></textarea><br>
             <button id="addItemsBtn">Add Items</button>
 
-            <div class="password-manager" id="password-manager-section">
-                <h3>Manage Admin Accounts (Main Admin Only)</h3>
+            <div id="fullAdminControls" style="display: none;">
                 
-                <h4>Set Limited Main Admin Password (Full Editor)</h4>
-                <input type="text" id="limitedMainPasswordInput" placeholder="Password for Limited Editor" />
-                <button id="setLimitedMainAdminBtn">Set Limited Admin</button>
-                <hr style="margin: 15px 0;" />
-                <h4>Add Shop-Specific Admin</h4>
-                <input type="text" id="newPassword" placeholder="New Password" />
-                
-                <input type="text" id="permsShops" placeholder="Shops (comma-separated, e.g., Ikea,Zenith)" />
-                <button id="addAdminBtn">Add Admin</button>
-                <div id="admin-accounts" style="margin-top: 10px;"></div>
+                <div id="password-manager-section" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ccc;">
+                    <h3>Manage Admin Accounts (Main Admin Only)</h3>
+                    
+                    <h4>Set Limited Main Admin Password (Full Editor)</h4>
+                    <input type="text" id="limitedMainPasswordInput" placeholder="Password for Limited Editor" />
+                    <button id="setLimitedMainAdminBtn">Set Limited Admin</button>
+                    <hr style="margin: 15px 0;" />
+                    
+                    <h4>Add Shop-Specific Admin</h4>
+                    <input type="text" id="newPassword" placeholder="New Password" />
+                    <input type="text" id="permsShops" placeholder="Shops (comma-separated, e.g., Ikea,Zenith)" />
+                    <button id="addAdminBtn">Add Admin</button>
+                    <div id="admin-accounts" style="margin-top: 10px;"></div>
+                </div>
+
+                <div id="limitedAdminLogSection" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ccc;">
+                    <h4>Limited Main Admin Log (Read-only)</h4>
+                    <textarea id="limitedAdminLogDisplay" readonly style="width: 100%; height: 200px; font-size: 0.8em; background-color: #f0f0f0;"></textarea>
+                </div>
             </div>
-            
             <div id="mainAdminInactiveToggle" class="inactive-manager" style="display: none;">
-                
-                <h3>Shop Status</h3>
+                <h3>Shop Status (Global)</h3>
                 <input type="text" id="shopNameAdmin" placeholder="Enter shop name" />
                 <button id="toggleInactiveBtn">Toggle Inactive</button>
             </div>
 
             <div id="shopOwnerInactiveToggle" class="inactive-manager">
                 <h3>My Shop Status</h3>
-               
                 <button id="toggleMyStatusBtn">Toggle Inactive</button>
             </div>
         </div>
@@ -391,7 +396,7 @@
      projectId: "nixie-bot",
      storageBucket: "nixie-bot.firebasestorage.app",
      messagingSenderId: "285490694055",
-     appId: "1:285490694055:web:d39ac21d99a8e16052d882",
+     appId: "1:285490694055:web:d39ac21d99a4e16052d882",
      measurementId: "G-YBDQ23Z555"
     };
     const app = initializeApp(firebaseConfig);
@@ -404,6 +409,7 @@
     let adminAccounts = {};
     let mainAdminPassword = null;
     let limitedMainPassword = null; 
+    let limitedAdminLog = [];
     
     /**
      * @type {null|"all"|"_LIMITED_EDIT_ALL_"|string[]}
@@ -435,6 +441,29 @@
         }
         return false;
     }
+
+    // --- LOGGING FUNCTIONS ---
+    function logLimitedAction(actionDescription) {
+        if (currentPerms !== "_LIMITED_EDIT_ALL_") {
+            return; // Only log actions if the current user is the limited admin
+        }
+        const timestamp = new Date().toLocaleString();
+        const logEntry = `[${timestamp}] ${actionDescription}`;
+        limitedAdminLog.unshift(logEntry); // Add to the beginning (most recent first)
+        
+        // Limit log size to prevent excessive data growth (e.g., 50 entries)
+        if (limitedAdminLog.length > 50) {
+            limitedAdminLog.pop(); 
+        }
+        renderLimitedLog();
+    }
+    
+    function renderLimitedLog() {
+        const logDisplay = document.getElementById("limitedAdminLogDisplay");
+        if (logDisplay) {
+            logDisplay.value = limitedAdminLog.join('\n');
+        }
+    }
     
     // --- SERVER-SIDE FUNCTIONS ---
     async function saveAllData() {
@@ -444,7 +473,8 @@
             inactiveShops: inactiveShops,
             mainAdminPassword: mainAdminPassword,
             limitedMainPassword: limitedMainPassword, 
-            suggestions: suggestions
+            suggestions: suggestions,
+            limitedAdminLog: limitedAdminLog
        };
         
         try {
@@ -467,6 +497,7 @@
                 mainAdminPassword = data.mainAdminPassword || null;
                 limitedMainPassword = data.limitedMainPassword || null; 
                 suggestions = data.suggestions || [];
+                limitedAdminLog = data.limitedAdminLog || [];
             }
         } catch (e) {
             console.error("Error loading data: ", e);
@@ -518,22 +549,25 @@
         if (isToggling) {
             return;
         }
-        if (!isPermittedToEdit(shopItems[index])) {
+        const item = shopItems[index];
+
+        if (!isPermittedToEdit(item)) {
             alert("Permission denied to modify this item status.");
             return;
         }
 
         isToggling = true;
-        const item = shopItems[index];
         if (!item.reports) {
             item.reports = { broken: {}, outOfStock: {} };
         }
         const isBroken = Object.keys(item.reports.broken).length > 0;
         if (isBroken) {
             item.reports.broken = {};
+            logLimitedAction(`Cleared broken status for item: ${item.name} (${item.shop})`);
             alert(`Item '${item.name}' is no longer marked as broken.`);
         } else {
             item.reports.broken['admin'] = true;
+            logLimitedAction(`Marked item as broken: ${item.name} (${item.shop})`);
             alert(`Item '${item.name}' is now marked as broken.`);
         }
         saveAllData();
@@ -607,11 +641,9 @@
             
             // Admin/Editor View
             if (currentPerms) {
-                // *** UPDATED LOGIC HERE ***
                 // "all" AND "_LIMITED_EDIT_ALL_" can edit shop and currency
                 const shopInputDisabled = (currentPerms !== "all" && currentPerms !== "_LIMITED_EDIT_ALL_") ?
                     "disabled" : "";
-                // *** END UPDATED LOGIC ***
                 
                 const brokenCount = item.reports && item.reports.broken ? Object.keys(item.reports.broken).length : 0;
                 const outOfStockCount = item.reports && item.reports.outOfStock ?
@@ -681,21 +713,23 @@
     }
     
     function toggleShopInactiveStatus() {
+        const shopName = document.getElementById("shopNameAdmin").value.trim();
         // ALLOW "all" AND "_LIMITED_EDIT_ALL_" TO USE THIS
         if (currentPerms !== "all" && currentPerms !== "_LIMITED_EDIT_ALL_") {
             alert("You do not have permission to use this feature.");
             return;
         }
-        const shopName = document.getElementById("shopNameAdmin").value.trim();
         if (!shopName) {
             alert("Please enter a shop name.");
             return;
         }
         if (inactiveShops[shopName]) {
             delete inactiveShops[shopName];
+            logLimitedAction(`Toggled shop status: ${shopName} set to ACTIVE`);
             alert(`${shopName} is now active.`);
         } else {
             inactiveShops[shopName] = true;
+            logLimitedAction(`Toggled shop status: ${shopName} set to INACTIVE`);
             alert(`${shopName} is now inactive.`);
         }
         saveAllData();
@@ -729,6 +763,7 @@
             button.textContent = "Set My Shop Active";
             alert("Your shop(s) are now inactive.");
         }
+        // Note: Shop owners do not use limitedAdminLog
         saveAllData();
         renderItems(shopItems);
     }
@@ -792,6 +827,7 @@
             return;
         }
         item.reports[type] = {};
+        logLimitedAction(`Resolved ${type} reports for item: ${item.name} (${item.shop})`);
         alert(`Reports for ${item.name} from ${item.shop} (${type}) have been resolved.`);
         saveAllData();
         renderItems(shopItems);
@@ -842,24 +878,31 @@
             return;
         }
         
+        let logValue = value;
         if (field === 'price') {
             if (value.toLowerCase().trim() === 'free') {
                 item[field] = 'Free';
                 item['currency'] = '';
+                logValue = 'Free';
             } else {
                 const num = parseInt(value);
                 if (!isNaN(num)) {
                     item[field] = num;
+                    logValue = num;
                 }
             }
         } else if (field === "quantity") {
             const num = parseInt(value);
             if (!isNaN(num)) {
                 item[field] = num;
+                logValue = num;
             }
         } else {
             item[field] = value.trim();
         }
+
+        logLimitedAction(`Updated item: ${item.name} (${item.shop}). Changed ${field} to "${logValue}"`);
+
         saveAllData();
         renderItems(shopItems);
     }
@@ -872,7 +915,11 @@
             return;
         }
         
+        const removedItemName = item.name;
+        const removedItemShop = item.shop;
+
         shopItems.splice(index, 1);
+        logLimitedAction(`Removed item: ${removedItemName} (${removedItemShop})`);
         saveAllData();
         renderItems(shopItems);
     }
@@ -905,6 +952,7 @@
 
         const input = document.getElementById("adminInput").value;
         const lines = input.split("\n").filter(line => line.trim() !== '');
+        let itemsAdded = 0;
 
         lines.forEach(line => {
             const parts = line.split('>');
@@ -976,7 +1024,12 @@
             if (inactiveShops[shop] === undefined) {
                 inactiveShops[shop] = false;
             }
+            itemsAdded++;
         });
+        
+        if (itemsAdded > 0) {
+            logLimitedAction(`Bulk added ${itemsAdded} item(s).`);
+        }
         
         document.getElementById("adminInput").value = "";
         saveAllData();
@@ -984,24 +1037,22 @@
     }
 
     document.getElementById("adminBtn").addEventListener("click", async () => {
+        const fullAdminControls = document.getElementById("fullAdminControls"); // NEW ID
         const mainAdminPanel = document.getElementById("mainAdminInactiveToggle");
         const shopOwnerPanel = document.getElementById("shopOwnerInactiveToggle");
-        const passwordManager = document.getElementById("password-manager-section");
         
         // LOGOUT LOGIC
         if (currentPerms !== null) {
             currentPerms = null;
             document.getElementById("adminBtn").textContent = "Admin";
- 
             document.getElementById("adminPanel").style.display = "none";
+            fullAdminControls.style.display = "none"; // NEW
             mainAdminPanel.style.display = "none";
             shopOwnerPanel.style.display = "none";
-            passwordManager.style.display = "none";
             renderItems(shopItems);
             return;
         }
         
-     
         // INITIAL SETUP FOR MAIN ADMIN PASSWORD
         if (mainAdminPassword === null) {
             const newPass = prompt("No main admin password set. Please enter a new password:");
@@ -1010,7 +1061,7 @@
                 await saveAllData();
                 alert("Main admin password set successfully! Please log in.");
                 document.getElementById("adminBtn").click();
-                // Re-trigger login attempt
+                return;
             } else {
                 alert("Password not set. Aborting.");
             }
@@ -1025,21 +1076,20 @@
             document.getElementById("adminPanel").style.display = "block";
             document.getElementById("adminBtn").textContent = "Log out";
             renderItems(shopItems);
-            passwordManager.style.display = "block";
+            fullAdminControls.style.display = "block"; // SHOW Full Admin Controls (Passwords + Log)
             mainAdminPanel.style.display = "block";
             shopOwnerPanel.style.display = "none";
             renderAdminAccounts();
-        } else if (password === limitedMainPassword && limitedMainPassword !== null) { // USING CONFIGURABLE PASSWORD
+            renderLimitedLog();
+        } else if (password === limitedMainPassword && limitedMainPassword !== null) { 
             // LIMITED EDITOR LOGIN
             currentPerms = "_LIMITED_EDIT_ALL_";
             document.getElementById("adminPanel").style.display = "block";
             document.getElementById("adminBtn").textContent = "Log out";
             renderItems(shopItems);
             
-            // Hides the password manager section
-            passwordManager.style.display = "none";
-            // SHOWS THE INACTIVE TOGGLE SECTION 
-            mainAdminPanel.style.display = "block";
+            fullAdminControls.style.display = "none"; // HIDE Full Admin Controls (Passwords + Log)
+            mainAdminPanel.style.display = "block"; 
             shopOwnerPanel.style.display = "none";
             
             alert("Logged in with limited editor permissions. You can view, add, and modify all items, and manage shop active/inactive status.");
@@ -1049,7 +1099,7 @@
             document.getElementById("adminPanel").style.display = "block";
             document.getElementById("adminBtn").textContent = "Log out";
             renderItems(shopItems);
-            passwordManager.style.display = "none";
+            fullAdminControls.style.display = "none"; // HIDE Full Admin Controls (Passwords + Log)
             mainAdminPanel.style.display = "none";
             shopOwnerPanel.style.display = "block";
             updateMyToggleButton();
@@ -1180,6 +1230,7 @@
     (async () => {
         await loadAllData();
         renderItems(shopItems);
+        renderLimitedLog();
     })();
 </script>
 </body>
