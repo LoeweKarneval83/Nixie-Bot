@@ -342,9 +342,9 @@
                     <div id="admin-accounts" style="margin-top: 10px;"></div>
                 </div>
 
-                <div id="limitedAdminLogSection" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ccc;">
-                    <h4>Limited Main Admin Log (Read-only)</h4>
-                    <textarea id="limitedAdminLogDisplay" readonly style="width: 100%; height: 200px; font-size: 0.8em; background-color: #f0f0f0;"></textarea>
+                <div id="generalAdminLogSection" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ccc;">
+                    <h4>General Admin Log (Read-only)</h4>
+                    <textarea id="generalAdminLogDisplay" readonly style="width: 100%; height: 200px; font-size: 0.8em; background-color: #f0f0f0;"></textarea>
                 </div>
             </div>
             <div id="mainAdminInactiveToggle" class="inactive-manager" style="display: none;">
@@ -409,7 +409,7 @@
     let adminAccounts = {};
     let mainAdminPassword = null;
     let limitedMainPassword = null; 
-    let limitedAdminLog = [];
+    let generalAdminLog = []; 
     
     /**
      * @type {null|"all"|"_LIMITED_EDIT_ALL_"|string[]}
@@ -442,26 +442,38 @@
         return false;
     }
 
-    // --- LOGGING FUNCTIONS ---
-    function logLimitedAction(actionDescription) {
-        if (currentPerms !== "_LIMITED_EDIT_ALL_") {
-            return; // Only log actions if the current user is the limited admin
+    // --- LOGGING FUNCTIONS (NOW GENERAL) ---
+    function logAdminAction(actionDescription) {
+        if (!currentPerms) {
+            return; // Only log for logged-in admins
         }
+        
+        let identity;
+        if (currentPerms === "all") {
+            identity = "Full Admin";
+        } else if (currentPerms === "_LIMITED_EDIT_ALL_") {
+            identity = "Limited Admin";
+        } else if (Array.isArray(currentPerms)) {
+            identity = `Shop Owner(s) [${currentPerms.join(", ")}]`;
+        } else {
+            return; // Should not happen
+        }
+
         const timestamp = new Date().toLocaleString();
-        const logEntry = `[${timestamp}] ${actionDescription}`;
-        limitedAdminLog.unshift(logEntry); // Add to the beginning (most recent first)
+        const logEntry = `[${timestamp}] | ${identity} | ${actionDescription}`;
+        generalAdminLog.unshift(logEntry); // Add to the beginning (most recent first)
         
         // Limit log size to prevent excessive data growth (e.g., 50 entries)
-        if (limitedAdminLog.length > 50) {
-            limitedAdminLog.pop(); 
+        if (generalAdminLog.length > 50) {
+            generalAdminLog.pop(); 
         }
-        renderLimitedLog();
+        renderGeneralLog();
     }
     
-    function renderLimitedLog() {
-        const logDisplay = document.getElementById("limitedAdminLogDisplay");
+    function renderGeneralLog() {
+        const logDisplay = document.getElementById("generalAdminLogDisplay"); 
         if (logDisplay) {
-            logDisplay.value = limitedAdminLog.join('\n');
+            logDisplay.value = generalAdminLog.join('\n');
         }
     }
     
@@ -474,7 +486,7 @@
             mainAdminPassword: mainAdminPassword,
             limitedMainPassword: limitedMainPassword, 
             suggestions: suggestions,
-            limitedAdminLog: limitedAdminLog
+            limitedAdminLog: generalAdminLog 
        };
         
         try {
@@ -497,7 +509,7 @@
                 mainAdminPassword = data.mainAdminPassword || null;
                 limitedMainPassword = data.limitedMainPassword || null; 
                 suggestions = data.suggestions || [];
-                limitedAdminLog = data.limitedAdminLog || [];
+                generalAdminLog = data.limitedAdminLog || []; 
             }
         } catch (e) {
             console.error("Error loading data: ", e);
@@ -540,6 +552,7 @@
         }
         
         limitedMainPassword = newPass;
+        logAdminAction(`Set Limited Main Admin password.`);
         alert("Limited Main Admin password set successfully!");
         saveAllData();
         document.getElementById("limitedMainPasswordInput").value = "";
@@ -563,11 +576,11 @@
         const isBroken = Object.keys(item.reports.broken).length > 0;
         if (isBroken) {
             item.reports.broken = {};
-            logLimitedAction(`Cleared broken status for item: ${item.name} (${item.shop})`);
+            logAdminAction(`Cleared broken status for item: ${item.name} (${item.shop})`);
             alert(`Item '${item.name}' is no longer marked as broken.`);
         } else {
             item.reports.broken['admin'] = true;
-            logLimitedAction(`Marked item as broken: ${item.name} (${item.shop})`);
+            logAdminAction(`Marked item as broken: ${item.name} (${item.shop})`);
             alert(`Item '${item.name}' is now marked as broken.`);
         }
         saveAllData();
@@ -678,27 +691,8 @@
             }
             itemList.appendChild(div);
         });
-        // Event listeners for editable items
-        itemList.addEventListener('change', (e) => {
-            const target = e.target;
-            if (target.matches('input[data-index]')) {
-                const index = target.dataset.index;
-                const field = target.dataset.field;
-                updateItem(index, 
-                    field, target.value);
-            }
-        });
-        itemList.addEventListener('click', (e) => {
-            const target = e.target;
-            if (target.matches('.removeBtn')) {
-                removeItem(target.dataset.index);
-            } else if (target.matches('.resolvedBtn')) {
-                resolveReports(target.dataset.index, target.dataset.type);
-            } else if (target.matches('.toggleItemBrokenBtn')) {
-   
-                toggleItemBrokenStatus(target.dataset.index);
-            }
-        });
+        
+        // Removed duplicated event listener setup from here.
     }
 
     function performSearch() {
@@ -725,11 +719,11 @@
         }
         if (inactiveShops[shopName]) {
             delete inactiveShops[shopName];
-            logLimitedAction(`Toggled shop status: ${shopName} set to ACTIVE`);
+            logAdminAction(`Toggled shop status: ${shopName} set to ACTIVE`);
             alert(`${shopName} is now active.`);
         } else {
             inactiveShops[shopName] = true;
-            logLimitedAction(`Toggled shop status: ${shopName} set to INACTIVE`);
+            logAdminAction(`Toggled shop status: ${shopName} set to INACTIVE`);
             alert(`${shopName} is now inactive.`);
         }
         saveAllData();
@@ -758,12 +752,13 @@
         const button = document.getElementById("toggleMyStatusBtn");
         if (allInactive) {
             button.textContent = "Set My Shop Inactive";
+            logAdminAction(`Toggled shop status: ${myShops.join(", ")} set to ACTIVE`); // LOGGED
             alert("Your shop(s) are now active.");
         } else {
             button.textContent = "Set My Shop Active";
+            logAdminAction(`Toggled shop status: ${myShops.join(", ")} set to INACTIVE`); // LOGGED
             alert("Your shop(s) are now inactive.");
         }
-        // Note: Shop owners do not use limitedAdminLog
         saveAllData();
         renderItems(shopItems);
     }
@@ -827,7 +822,7 @@
             return;
         }
         item.reports[type] = {};
-        logLimitedAction(`Resolved ${type} reports for item: ${item.name} (${item.shop})`);
+        logAdminAction(`Resolved ${type} reports for item: ${item.name} (${item.shop})`);
         alert(`Reports for ${item.name} from ${item.shop} (${type}) have been resolved.`);
         saveAllData();
         renderItems(shopItems);
@@ -860,6 +855,7 @@
         
         if (newPass && perms.length > 0) {
             adminAccounts[newPass] = { perms: perms };
+            logAdminAction(`Added new Shop Owner account(s) for shops: ${perms.join(", ")}`);
             alert("New admin account created!");
             saveAllData();
             renderAdminAccounts();
@@ -901,7 +897,7 @@
             item[field] = value.trim();
         }
 
-        logLimitedAction(`Updated item: ${item.name} (${item.shop}). Changed ${field} to "${logValue}"`);
+        logAdminAction(`Updated item: ${item.name} (${item.shop}). Changed ${field} to "${logValue}"`);
 
         saveAllData();
         renderItems(shopItems);
@@ -919,7 +915,7 @@
         const removedItemShop = item.shop;
 
         shopItems.splice(index, 1);
-        logLimitedAction(`Removed item: ${removedItemName} (${removedItemShop})`);
+        logAdminAction(`Removed item: ${removedItemName} (${removedItemShop})`);
         saveAllData();
         renderItems(shopItems);
     }
@@ -1028,7 +1024,7 @@
         });
         
         if (itemsAdded > 0) {
-            logLimitedAction(`Bulk added ${itemsAdded} item(s).`);
+            logAdminAction(`Bulk added ${itemsAdded} item(s).`);
         }
         
         document.getElementById("adminInput").value = "";
@@ -1037,7 +1033,7 @@
     }
 
     document.getElementById("adminBtn").addEventListener("click", async () => {
-        const fullAdminControls = document.getElementById("fullAdminControls"); // NEW ID
+        const fullAdminControls = document.getElementById("fullAdminControls"); 
         const mainAdminPanel = document.getElementById("mainAdminInactiveToggle");
         const shopOwnerPanel = document.getElementById("shopOwnerInactiveToggle");
         
@@ -1046,7 +1042,7 @@
             currentPerms = null;
             document.getElementById("adminBtn").textContent = "Admin";
             document.getElementById("adminPanel").style.display = "none";
-            fullAdminControls.style.display = "none"; // NEW
+            fullAdminControls.style.display = "none"; 
             mainAdminPanel.style.display = "none";
             shopOwnerPanel.style.display = "none";
             renderItems(shopItems);
@@ -1080,7 +1076,7 @@
             mainAdminPanel.style.display = "block";
             shopOwnerPanel.style.display = "none";
             renderAdminAccounts();
-            renderLimitedLog();
+            renderGeneralLog();
         } else if (password === limitedMainPassword && limitedMainPassword !== null) { 
             // LIMITED EDITOR LOGIN
             currentPerms = "_LIMITED_EDIT_ALL_";
@@ -1105,6 +1101,32 @@
             updateMyToggleButton();
         } else {
             alert("Incorrect password.");
+        }
+    });
+
+    // --- DEDICATED, ONE-TIME EVENT LISTENERS FOR ITEM LIST ---
+    const itemList = document.getElementById("item-list");
+
+    // Delegate CHANGE events (for text/number input updates)
+    itemList.addEventListener('change', (e) => {
+        const target = e.target;
+        if (target.matches('input[data-index]')) {
+            const index = target.dataset.index;
+            const field = target.dataset.field;
+            updateItem(index, 
+                field, target.value);
+        }
+    });
+
+    // Delegate CLICK events (for buttons)
+    itemList.addEventListener('click', (e) => {
+        const target = e.target;
+        if (target.matches('.removeBtn')) {
+            removeItem(target.dataset.index);
+        } else if (target.matches('.resolvedBtn')) {
+            resolveReports(target.dataset.index, target.dataset.type);
+        } else if (target.matches('.toggleItemBrokenBtn')) {
+            toggleItemBrokenStatus(target.dataset.index);
         }
     });
 
@@ -1230,7 +1252,7 @@
     (async () => {
         await loadAllData();
         renderItems(shopItems);
-        renderLimitedLog();
+        renderGeneralLog();
     })();
 </script>
 </body>
