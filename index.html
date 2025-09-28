@@ -85,6 +85,11 @@
             border-radius: 4px;
             box-sizing: border-box;
         }
+        .item input[disabled] {
+            background-color: #f5f5f5;
+            color: #666;
+            cursor: not-allowed;
+        }
         .item span, .item button {
             display: block;
             margin: 5px 0;
@@ -124,6 +129,10 @@
         #adminPanel {
             display: none;
             margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
         }
         #adminBtn {
             position: absolute;
@@ -297,11 +306,12 @@
     <div id="main-view">
         <button id="adminBtn">Admin</button>
         <h1>Nixie Bot</h1>
-
+        
         <div class="controls">
             <div class="search-container">
                 <input type="text" id="search-term" placeholder="Search item name..." />
                 <button id="search-toggle-btn">Shop</button>
+    
             </div>
             <button id="search-btn">Search</button>
             <button id="sort-alpha-btn">Sort A–Z</button>
@@ -311,18 +321,27 @@
 
         <div id="adminPanel">
             <h3>Paste Items Below</h3>
+      
             <textarea id="adminInput" placeholder="Format: Shop > [Quantity] Item [for] Price Currency (or 'Free')"></textarea><br>
             <button id="addItemsBtn">Add Items</button>
 
             <div class="password-manager" id="password-manager-section">
-                <h3>Manage Admin Accounts</h3>
+                <h3>Manage Admin Accounts (Main Admin Only)</h3>
+                
+                <h4>Set Limited Main Admin Password (Full Editor)</h4>
+                <input type="text" id="limitedMainPasswordInput" placeholder="Password for Limited Editor" />
+                <button id="setLimitedMainAdminBtn">Set Limited Admin</button>
+                <hr style="margin: 15px 0;" />
+                <h4>Add Shop-Specific Admin</h4>
                 <input type="text" id="newPassword" placeholder="New Password" />
+                
                 <input type="text" id="permsShops" placeholder="Shops (comma-separated, e.g., Ikea,Zenith)" />
                 <button id="addAdminBtn">Add Admin</button>
                 <div id="admin-accounts" style="margin-top: 10px;"></div>
             </div>
             
             <div id="mainAdminInactiveToggle" class="inactive-manager" style="display: none;">
+                
                 <h3>Shop Status</h3>
                 <input type="text" id="shopNameAdmin" placeholder="Enter shop name" />
                 <button id="toggleInactiveBtn">Toggle Inactive</button>
@@ -330,6 +349,7 @@
 
             <div id="shopOwnerInactiveToggle" class="inactive-manager">
                 <h3>My Shop Status</h3>
+               
                 <button id="toggleMyStatusBtn">Toggle Inactive</button>
             </div>
         </div>
@@ -342,6 +362,7 @@
         <h2>Report a Problem</h2>
         <p>You are reporting an issue for the item: <span id="report-item-name"></span> from shop: <span id="report-shop-name"></span>.</p>
         <button id="broken-shop-btn" class="report-button">Report Broken Shop</button>
+     
         <button id="out-of-stock-btn" class="report-button">Report Out of Stock</button>
     </div>
 
@@ -353,6 +374,7 @@
         <div class="suggestion-form">
             <h3>Submit Your Own Suggestion</h3>
             <textarea id="suggestion-input" placeholder="Type your suggestion here..."></textarea>
+            
             <button id="submit-suggestion-btn">Submit Suggestion</button>
         </div>
     </div>
@@ -362,6 +384,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics.js";
     
+    // IMPORTANT: Use your actual Firebase config here.
     const firebaseConfig = {
      apiKey: "AIzaSyBiI3NhWiKzLQT441TkwBJKoD5Dqw5wNWk",
      authDomain: "nixie-bot.firebaseapp.com",
@@ -371,16 +394,24 @@
      appId: "1:285490694055:web:d39ac21d99a8e16052d882",
      measurementId: "G-YBDQ23Z555"
     };
-
     const app = initializeApp(firebaseConfig);
     const analytics = getAnalytics(app);
 
-    import { getFirestore, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
     const db = getFirestore(app);
 
     let shopItems = [];
     let adminAccounts = {};
     let mainAdminPassword = null;
+    let limitedMainPassword = null; 
+    
+    /**
+     * @type {null|"all"|"_LIMITED_EDIT_ALL_"|string[]}
+     * null: public user
+     * "all": main admin (full permissions)
+     * "_LIMITED_EDIT_ALL_": limited editor (can modify all items, no admin panels)
+     * string[]: shop owner (can only modify assigned shops, can toggle own status)
+     */
     let currentPerms = null;
     let currentReportItem = null;
     const userId = Math.random().toString(36).substring(2, 15);
@@ -389,6 +420,22 @@
     let isToggling = false;
     let suggestions = [];
     
+    // --- UTILITY FUNCTION: PERMISSION CHECK ---
+    /**
+     * Checks if the current user has permission to modify a specific item.
+     * @param {object} item The item object.
+     * @returns {boolean} True if the user can edit the item.
+     */
+    function isPermittedToEdit(item) {
+        if (currentPerms === "all" || currentPerms === "_LIMITED_EDIT_ALL_") {
+            return true;
+        }
+        if (Array.isArray(currentPerms) && currentPerms.includes(item.shop)) {
+            return true;
+        }
+        return false;
+    }
+    
     // --- SERVER-SIDE FUNCTIONS ---
     async function saveAllData() {
         const dataToSave = {
@@ -396,8 +443,9 @@
             adminAccounts: adminAccounts,
             inactiveShops: inactiveShops,
             mainAdminPassword: mainAdminPassword,
+            limitedMainPassword: limitedMainPassword, 
             suggestions: suggestions
-        };
+       };
         
         try {
             await setDoc(doc(db, "shop-data", "main-data"), dataToSave);
@@ -417,6 +465,7 @@
                 adminAccounts = Object.assign({}, data.adminAccounts);
                 inactiveShops = data.inactiveShops || {};
                 mainAdminPassword = data.mainAdminPassword || null;
+                limitedMainPassword = data.limitedMainPassword || null; 
                 suggestions = data.suggestions || [];
             }
         } catch (e) {
@@ -436,6 +485,9 @@
     document.getElementById("sort-price-btn").addEventListener("click", () => sortItems('price'));
     document.getElementById("addItemsBtn").addEventListener("click", addItems);
     document.getElementById("addAdminBtn").addEventListener("click", addAdminAccount);
+    
+    document.getElementById("setLimitedMainAdminBtn").addEventListener("click", setLimitedMainAdminPassword);
+    
     document.getElementById("toggleInactiveBtn").addEventListener("click", toggleShopInactiveStatus);
     document.getElementById("toggleMyStatusBtn").addEventListener("click", toggleMyShopInactiveStatus);
     document.getElementById("closeReportBtn").addEventListener("click", closeReportPage);
@@ -445,10 +497,32 @@
     document.getElementById("closeSuggestionsBtn").addEventListener("click", closeSuggestionsPage);
     document.getElementById("submit-suggestion-btn").addEventListener("click", submitSuggestion);
 
+    function setLimitedMainAdminPassword() {
+        if (currentPerms !== "all") {
+            alert("You do not have permission to set this password.");
+            return;
+        }
+        const newPass = document.getElementById("limitedMainPasswordInput").value.trim();
+        if (!newPass) {
+            alert("Please enter a password.");
+            return;
+        }
+        
+        limitedMainPassword = newPass;
+        alert("Limited Main Admin password set successfully!");
+        saveAllData();
+        document.getElementById("limitedMainPasswordInput").value = "";
+    }
+
     function toggleItemBrokenStatus(index) {
         if (isToggling) {
             return;
         }
+        if (!isPermittedToEdit(shopItems[index])) {
+            alert("Permission denied to modify this item status.");
+            return;
+        }
+
         isToggling = true;
         const item = shopItems[index];
         if (!item.reports) {
@@ -487,62 +561,99 @@
     function renderItems(items) {
         const itemList = document.getElementById("item-list");
         itemList.innerHTML = "";
+        
+        // Filter items based on current permissions
         const filteredItems = items.filter(item => {
-            if (currentPerms === null) return true;
-            if (currentPerms === "all") return true;
-            if (currentPerms && currentPerms.includes(item.shop)) return true;
+            if (currentPerms === null) return true; // Public view
+            if (currentPerms === "all") return true; // Full admin sees all
+            if (currentPerms === "_LIMITED_EDIT_ALL_") return true; // Limited editor sees all
+            if (Array.isArray(currentPerms) 
+            && currentPerms.includes(item.shop)) return true; // Shop owner sees their shops
             return false;
         });
         if (filteredItems.length === 0) {
             itemList.innerHTML = "<p>No items to display.</p>";
             return;
         }
-        filteredItems.forEach((item, index) => {
+        
+        // Find the correct index in the *original* shopItems array for editing/updating
+        filteredItems.forEach((item) => {
+            const originalIndex = shopItems.findIndex(i => 
+                i.shop === item.shop && 
+                i.name === item.name &&
+      
+                i.quantity === item.quantity &&
+                i.price === item.price
+            );
+            
+            if (originalIndex === -1) return; // Should not happen
+
             const div = document.createElement("div");
+          
             div.className = "item";
+            
             if (inactiveShops[item.shop]) {
                 div.classList.add('inactive');
             }
             if (item.reports && Object.keys(item.reports.broken).length > 0) {
                 div.classList.add('broken');
+        
             }
+            
+            // Public View: Click to Report
             if (currentPerms === null) {
-                div.addEventListener('click', () => showReportPage(item, index));
+                div.addEventListener('click', () => showReportPage(item, originalIndex));
             }
+            
+            // Admin/Editor View
             if (currentPerms) {
-                const shopInputDisabled = (currentPerms !== "all") ? "disabled" : "";
+                // *** UPDATED LOGIC HERE ***
+                // "all" AND "_LIMITED_EDIT_ALL_" can edit shop and currency
+                const shopInputDisabled = (currentPerms !== "all" && currentPerms !== "_LIMITED_EDIT_ALL_") ?
+                    "disabled" : "";
+                // *** END UPDATED LOGIC ***
+                
                 const brokenCount = item.reports && item.reports.broken ? Object.keys(item.reports.broken).length : 0;
-                const outOfStockCount = item.reports && item.reports.outOfStock ? Object.keys(item.reports.outOfStock).length : 0;
+                const outOfStockCount = item.reports && item.reports.outOfStock ?
+                    Object.keys(item.reports.outOfStock).length : 0;
                 const isBroken = brokenCount > 0;
+                
                 div.innerHTML = `
-                    <input type="text" value="${item.name}" data-field="name" data-index="${index}" />
-                    <input type="number" value="${item.quantity}" data-field="quantity" data-index="${index}" />
-                    <input type="text" value="${item.price}" data-field="price" data-index="${index}" />
-                    <input type="text" value="${item.currency}" data-field="currency" data-index="${index}" ${shopInputDisabled}/>
-                    <input type="text" value="${item.shop}" data-field="shop" data-index="${index}" ${shopInputDisabled}/>
-                    <button class="removeBtn" data-index="${index}">Remove</button>
-                    <button class="toggleItemBrokenBtn ${isBroken ? 'is-broken' : ''}" data-index="${index}">${isBroken ? 'Clear Broken' : 'Mark Broken'}</button>
-                    <button class="resolvedBtn" data-index="${index}" data-type="broken">Resolve Broken Shop (${brokenCount})</button>
-                    <button class="resolvedBtn" data-index="${index}" data-type="outOfStock">Resolve Out of Stock (${outOfStockCount})</button>
+                    <input type="text" value="${item.name}" data-field="name" data-index="${originalIndex}" />
+                    <input type="number" value="${item.quantity}" data-field="quantity" data-index="${originalIndex}" />
+                    <input type="text" value="${item.price}" data-field="price" data-index="${originalIndex}" />
+              
+                    <input type="text" value="${item.currency}" data-field="currency" data-index="${originalIndex}" ${shopInputDisabled}/>
+                    <input type="text" value="${item.shop}" data-field="shop" data-index="${originalIndex}" ${shopInputDisabled}/>
+                    <button class="removeBtn" data-index="${originalIndex}">Remove</button>
+                    <button class="toggleItemBrokenBtn ${isBroken ? 'is-broken' : ''}" data-index="${originalIndex}">${isBroken ?
+                        'Clear Broken' : 'Mark Broken'}</button>
+                    <button class="resolvedBtn" data-index="${originalIndex}" data-type="broken">Resolve Broken Shop (${brokenCount})</button>
+                    <button class="resolvedBtn" data-index="${originalIndex}" data-type="outOfStock">Resolve Out of Stock (${outOfStockCount})</button>
                     `;
             } else {
-                const priceDisplay = typeof item.price === 'number' ? item.price : 'Free';
+                // Public Read-only View
+                const priceDisplay = typeof item.price === 'number' ?
+                    item.price : 'Free';
                 div.innerHTML = `
                     <span><strong>${item.name}</strong></span>
                     <span>Quantity: ${item.quantity}</span>
                     <span>Price: ${priceDisplay}</span>
                     <span>Currency: ${item.currency}</span>
+            
                     <span>Shop: ${item.shop}</span>
                     `;
             }
             itemList.appendChild(div);
         });
+        // Event listeners for editable items
         itemList.addEventListener('change', (e) => {
             const target = e.target;
             if (target.matches('input[data-index]')) {
                 const index = target.dataset.index;
                 const field = target.dataset.field;
-                updateItem(index, field, target.value);
+                updateItem(index, 
+                    field, target.value);
             }
         });
         itemList.addEventListener('click', (e) => {
@@ -552,6 +663,7 @@
             } else if (target.matches('.resolvedBtn')) {
                 resolveReports(target.dataset.index, target.dataset.type);
             } else if (target.matches('.toggleItemBrokenBtn')) {
+   
                 toggleItemBrokenStatus(target.dataset.index);
             }
         });
@@ -561,7 +673,7 @@
         const term = document.getElementById("search-term").value.toLowerCase();
         let filtered = [];
         if (isShopSearch) {
-            filtered = shopItems.filter(item => item.shop.toLowerCase() === term);
+            filtered = shopItems.filter(item => item.shop.toLowerCase().includes(term));
         } else {
             filtered = shopItems.filter(item => item.name.toLowerCase().includes(term));
         }
@@ -569,7 +681,8 @@
     }
     
     function toggleShopInactiveStatus() {
-        if (currentPerms !== "all") {
+        // ALLOW "all" AND "_LIMITED_EDIT_ALL_" TO USE THIS
+        if (currentPerms !== "all" && currentPerms !== "_LIMITED_EDIT_ALL_") {
             alert("You do not have permission to use this feature.");
             return;
         }
@@ -590,8 +703,8 @@
     }
 
     function toggleMyShopInactiveStatus() {
-        if (currentPerms === "all" || currentPerms === null) {
-            alert("You do not have permission to use this feature.");
+        if (!Array.isArray(currentPerms)) {
+            alert("This feature is only for registered shop owners.");
             return;
         }
         const myShops = currentPerms;
@@ -622,7 +735,8 @@
 
     function updateMyToggleButton() {
         const button = document.getElementById("toggleMyStatusBtn");
-        if (!currentPerms || currentPerms === "all") return;
+        // Only run for array-based shop owners
+        if (!Array.isArray(currentPerms)) return;
         let allInactive = true;
         currentPerms.forEach(shop => {
             if (!inactiveShops[shop]) {
@@ -668,10 +782,12 @@
 
     function resolveReports(index, type) {
         const item = shopItems[index];
-        if (currentPerms !== "all" && !currentPerms.includes(item.shop)) {
+        // Only "all" admin, "_LIMITED_EDIT_ALL_", or specific shop owners can resolve reports
+        if (currentPerms !== "all" && currentPerms !== "_LIMITED_EDIT_ALL_" && !(Array.isArray(currentPerms) && currentPerms.includes(item.shop))) {
             alert("You do not have permission to resolve reports for this shop.");
             return;
         }
+        
         if (!item.reports) {
             return;
         }
@@ -686,7 +802,8 @@
         accountList.innerHTML = "<h4>Admin Accounts:</h4>";
         for (const password in adminAccounts) {
             const p = document.createElement("p");
-            p.textContent = `Password: ${password} | Perms: ${adminAccounts[password].perms.join(", ")}`;
+            const permsDisplay = Array.isArray(adminAccounts[password].perms) ? adminAccounts[password].perms.join(", ") : "Error/All";
+            p.textContent = `Password: ${password} | Perms: ${permsDisplay}`;
             accountList.appendChild(p);
         }
     }
@@ -697,7 +814,14 @@
             return;
         }
         const newPass = document.getElementById("newPassword").value.trim();
-        const perms = document.getElementById("permsShops").value.split(",").map(s => s.trim());
+        const perms = document.getElementById("permsShops").value.split(",").map(s => s.trim()).filter(s => s.length > 0);
+        
+        // CHECK AGAINST CONFIGURABLE LIMITED ADMIN PASSWORD
+        if (newPass === limitedMainPassword) {
+            alert("The password cannot be the same as the Limited Main Admin password.");
+            return;
+        }
+        
         if (newPass && perms.length > 0) {
             adminAccounts[newPass] = { perms: perms };
             alert("New admin account created!");
@@ -709,29 +833,45 @@
     }
 
     function updateItem(index, field, value) {
+        const item = shopItems[index];
+        if (!isPermittedToEdit(item)) {
+            console.error("Permission denied to update this item.");
+            alert("Permission denied to update this item.");
+            // Re-render to ensure the UI doesn't show the unauthorized change
+            renderItems(shopItems);
+            return;
+        }
+        
         if (field === 'price') {
             if (value.toLowerCase().trim() === 'free') {
-                shopItems[index][field] = 'Free';
-                shopItems[index]['currency'] = '';
+                item[field] = 'Free';
+                item['currency'] = '';
             } else {
                 const num = parseInt(value);
                 if (!isNaN(num)) {
-                    shopItems[index][field] = num;
+                    item[field] = num;
                 }
             }
         } else if (field === "quantity") {
             const num = parseInt(value);
             if (!isNaN(num)) {
-                shopItems[index][field] = num;
+                item[field] = num;
             }
         } else {
-            shopItems[index][field] = value.trim();
+            item[field] = value.trim();
         }
         saveAllData();
         renderItems(shopItems);
     }
 
     function removeItem(index) {
+        const item = shopItems[index];
+        if (!isPermittedToEdit(item)) {
+            console.error("Permission denied to remove this item.");
+            alert("Permission denied to remove this item.");
+            return;
+        }
+        
         shopItems.splice(index, 1);
         saveAllData();
         renderItems(shopItems);
@@ -746,6 +886,7 @@
                 const priceA = a.price === 'Free' ? 0 : a.price;
                 const priceB = b.price === 'Free' ? 0 : b.price;
                 return priceA - priceB;
+          
             });
         }
         renderItems(sorted);
@@ -757,23 +898,41 @@
     }
 
     function addItems() {
+        if (!currentPerms) {
+            alert("You must be logged in as an admin to add items.");
+            return;
+        }
+
         const input = document.getElementById("adminInput").value;
         const lines = input.split("\n").filter(line => line.trim() !== '');
+
         lines.forEach(line => {
             const parts = line.split('>');
             if (parts.length < 2) {
                 alert(`Invalid format for item: "${line}". Missing '>' separator.`);
                 return;
             }
+        
             const shop = parts[0].trim();
-            let rest = parts.slice(1).join('>').trim();
-            if (currentPerms !== "all" && currentPerms && !currentPerms.includes(shop)) {
-                alert(`You can only add items for your assigned shop(s): ${currentPerms.join(", ")}`);
+            
+            // Check if the user has permission to add an item for this shop
+            const canAdd = currentPerms === "all" || 
+                           currentPerms === "_LIMITED_EDIT_ALL_" || 
+      
+                           (Array.isArray(currentPerms) && currentPerms.includes(shop));
+            
+            if (!canAdd) {
+                alert(`You can only add items for your assigned shop(s): ${Array.isArray(currentPerms) ? currentPerms.join(", ") : "None"}`);
                 return;
+     
             }
+            
+            let rest = parts.slice(1).join('>').trim();
             let price = null;
             let currency = null;
             let priceFound = false;
+            
+         
             if (rest.toLowerCase().endsWith(' free')) {
                 price = 'Free';
                 currency = '';
@@ -788,30 +947,37 @@
                     priceFound = true;
                 }
             }
+            
             if (!priceFound) {
                 alert(`Could not parse price for item: "${line}". Use format: Shop > [Qty] Item [for] Price Currency (or Free)`);
                 return;
             }
+            
             if (rest.toLowerCase().endsWith(' for')) {
                 rest = rest.slice(0, rest.length - 4).trim();
             }
+            
             let quantity = 1;
             let name = rest;
             const qtyMatch = rest.match(/^(\d+(\s+stack)?)\s+/i);
+            
             if (qtyMatch) {
                 const qtyRaw = qtyMatch[1];
                 quantity = qtyRaw.toLowerCase().includes("stack") ? parseInt(qtyRaw) * 64 : parseInt(qtyRaw);
                 name = rest.substring(qtyMatch[0].length).trim();
             }
+            
             if (!name) {
                 alert(`Invalid format: missing item name for "${line}".`);
                 return;
             }
+            
             shopItems.push({ shop, quantity, name, price, currency, reports: { broken: {}, outOfStock: {} } });
             if (inactiveShops[shop] === undefined) {
                 inactiveShops[shop] = false;
             }
         });
+        
         document.getElementById("adminInput").value = "";
         saveAllData();
         renderItems(shopItems);
@@ -821,9 +987,12 @@
         const mainAdminPanel = document.getElementById("mainAdminInactiveToggle");
         const shopOwnerPanel = document.getElementById("shopOwnerInactiveToggle");
         const passwordManager = document.getElementById("password-manager-section");
+        
+        // LOGOUT LOGIC
         if (currentPerms !== null) {
             currentPerms = null;
             document.getElementById("adminBtn").textContent = "Admin";
+ 
             document.getElementById("adminPanel").style.display = "none";
             mainAdminPanel.style.display = "none";
             shopOwnerPanel.style.display = "none";
@@ -831,6 +1000,9 @@
             renderItems(shopItems);
             return;
         }
+        
+     
+        // INITIAL SETUP FOR MAIN ADMIN PASSWORD
         if (mainAdminPassword === null) {
             const newPass = prompt("No main admin password set. Please enter a new password:");
             if (newPass) {
@@ -838,13 +1010,17 @@
                 await saveAllData();
                 alert("Main admin password set successfully! Please log in.");
                 document.getElementById("adminBtn").click();
+                // Re-trigger login attempt
             } else {
                 alert("Password not set. Aborting.");
             }
             return;
         }
+        
+        // LOGIN LOGIC
         const password = prompt("Enter admin password:");
         if (password === mainAdminPassword) {
+            // FULL ADMIN LOGIN
             currentPerms = "all";
             document.getElementById("adminPanel").style.display = "block";
             document.getElementById("adminBtn").textContent = "Log out";
@@ -853,7 +1029,22 @@
             mainAdminPanel.style.display = "block";
             shopOwnerPanel.style.display = "none";
             renderAdminAccounts();
+        } else if (password === limitedMainPassword && limitedMainPassword !== null) { // USING CONFIGURABLE PASSWORD
+            // LIMITED EDITOR LOGIN
+            currentPerms = "_LIMITED_EDIT_ALL_";
+            document.getElementById("adminPanel").style.display = "block";
+            document.getElementById("adminBtn").textContent = "Log out";
+            renderItems(shopItems);
+            
+            // Hides the password manager section
+            passwordManager.style.display = "none";
+            // SHOWS THE INACTIVE TOGGLE SECTION 
+            mainAdminPanel.style.display = "block";
+            shopOwnerPanel.style.display = "none";
+            
+            alert("Logged in with limited editor permissions. You can view, add, and modify all items, and manage shop active/inactive status.");
         } else if (adminAccounts[password]) {
+            // SHOP OWNER LOGIN
             currentPerms = adminAccounts[password].perms;
             document.getElementById("adminPanel").style.display = "block";
             document.getElementById("adminBtn").textContent = "Log out";
@@ -867,7 +1058,7 @@
         }
     });
 
-    // --- NEW SUGGESTION FUNCTIONS ---
+    // --- SUGGESTION FUNCTIONS ---
     function showSuggestionsPage() {
         document.getElementById("main-view").style.display = "none";
         document.getElementById("suggestions-view").style.display = "block";
@@ -884,7 +1075,7 @@
         feed.innerHTML = "";
         const sortedSuggestions = suggestions.sort((a, b) => {
             const aScore = Object.keys(a.upvotes).length - Object.keys(a.downvotes).length;
-            const bScore = Object.keys(b.upvotes).length - Object.keys(b.downvotes).length;
+            const bScore = Object.keys(b.downvotes).length - Object.keys(b.upvotes).length;
             return bScore - aScore;
         });
         if (sortedSuggestions.length === 0) {
@@ -898,7 +1089,8 @@
             const downvotes = Object.keys(suggestion.downvotes).length;
             const netScore = upvotes - downvotes;
 
-            let likedClass = '';
+            let 
+            likedClass = '';
             let dislikedClass = '';
 
             if (suggestion.upvotes[userId]) {
@@ -906,12 +1098,14 @@
             } else if (suggestion.downvotes[userId]) {
                 dislikedClass = 'disliked-active';
             }
+     
             
             div.innerHTML = `
                 <span class="suggestion-score">${netScore}</span>
                 <p>${suggestion.text}</p>
                 <div class="vote-controls">
                     <div class="vote-slider" data-id="${suggestion.id}">
+       
                         <button class="${dislikedClass}" data-vote="down">👎</button>
                         <button class="${likedClass}" data-vote="up">👍</button>
                     </div>
@@ -926,7 +1120,8 @@
                 const suggestionId = slider.dataset.id;
                 const voteType = e.target.dataset.vote;
                 
-                const suggestion = suggestions.find(s => s.id === suggestionId);
+                const suggestion = suggestions.find(s => s.id === 
+            suggestionId);
                 if (!suggestion) return;
 
                 const hasLiked = suggestion.upvotes[userId];
@@ -934,26 +1129,29 @@
 
                 if (voteType === 'up') {
                     if (hasLiked) {
+  
                         // User is removing their like vote
                         delete suggestion.upvotes[userId];
                     } else {
+                        // 
                         // User is casting a new like vote
                         delete suggestion.downvotes[userId];
                         suggestion.upvotes[userId] = true;
                     }
                 } else if (voteType === 'down') {
+ 
                     if (hasDisliked) {
                         // User is removing their dislike vote
                         delete suggestion.downvotes[userId];
-                    } else {
+            } else {
                         // User is casting a new dislike vote
                         delete suggestion.upvotes[userId];
-                        suggestion.downvotes[userId] = true;
+            suggestion.downvotes[userId] = true;
                     }
                 }
                 
                 saveAllData();
-                renderSuggestions();
+            renderSuggestions();
             });
         });
     }
