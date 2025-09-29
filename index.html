@@ -74,7 +74,7 @@
             background-color: #fff176;
         }
         .item.broken {
-            background-color: #ffcdd2;
+            background-color: #ffcdd2; /* Only applied when officially marked broken by admin */
         }
         .item input {
             width: 100%;
@@ -154,20 +154,6 @@
             padding: 50px;
             position: relative;
         }
-        .report-button {
-            display: block;
-            width: 200px;
-            margin: 20px auto;
-            background-color: #e57373;
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-size: 1.2em;
-        }
-        .report-button:hover {
-            background-color: #cc4444;
-        }
         .close-button {
             position: absolute;
             top: 10px;
@@ -220,6 +206,72 @@
             color: white;
         }
         
+        /* Styles for Item Detail View (new structure) */
+        #item-detail-container {
+            display: flex;
+            justify-content: center;
+            max-width: 1000px;
+            margin: 20px auto;
+            text-align: left;
+        }
+
+        #item-picture-and-controls {
+            width: 250px; 
+            flex-shrink: 0;
+            margin-right: 20px;
+            text-align: center; 
+        }
+
+        #item-picture-space {
+            width: 100%;
+            height: 250px;
+            background-color: #ddd; 
+            border: 1px solid #aaa;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2em;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        #report-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        #report-controls p {
+            margin: 5px 0;
+            font-weight: bold;
+        }
+
+        /* Adjust Report buttons for the detail view */
+        .report-button {
+            display: block;
+            width: 100%;
+            margin: 8px 0;
+            background-color: #e57373;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 1em;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .report-button:hover {
+            background-color: #cc4444;
+        }
+
+        #item-info-description {
+            flex-grow: 1;
+            text-align: left;
+            padding: 10px 0 10px 20px;
+            border-left: 1px solid #ccc;
+        }
+
         /* New styles for Suggestions page */
         .suggestions-page {
             padding: 20px;
@@ -364,13 +416,28 @@
 
     <div id="report-view" class="report-page">
         <button id="closeReportBtn" class="close-button">X</button>
-        <h2>Report a Problem</h2>
-        <p>You are reporting an issue for the item: <span id="report-item-name"></span> from shop: <span id="report-shop-name"></span>.</p>
-        <button id="broken-shop-btn" class="report-button">Report Broken Shop</button>
-     
-        <button id="out-of-stock-btn" class="report-button">Report Out of Stock</button>
+        <h2>Item Details: <span id="report-item-name"></span></h2>
+        
+        <div id="item-detail-container">
+            <div id="item-picture-and-controls">
+                <div id="item-picture-space">
+                    <p>🖼️ Image Placeholder</p>
+                </div>
+                
+                <div id="report-controls">
+                    <p>Report an Issue for Shop: <span id="report-shop-name"></span></p>
+                    <button id="broken-shop-btn" class="report-button">Report Broken Shop</button>
+                    <button id="out-of-stock-btn" class="report-button">Report Out of Stock</button>
+                </div>
+            </div>
+            
+            <div id="item-info-description">
+                <h3>Additional Item Information</h3>
+                <p>This is where any extra item details (quantity, price, description) would go in the future. Currently, only the item name is displayed in the header.</p>
+                <p>Status: **Available**</p>
+            </div>
+        </div>
     </div>
-
     <div id="suggestions-view" class="suggestions-page">
         <button id="closeSuggestionsBtn" class="close-button">X</button>
         <h2>Suggestions Feed</h2>
@@ -503,7 +570,11 @@
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                shopItems = data.shopItems || [];
+                // Map to ensure older items get the new 'isOfficiallyBroken' flag
+                shopItems = (data.shopItems || []).map(item => ({
+                    ...item,
+                    isOfficiallyBroken: item.isOfficiallyBroken || false // Initialize new flag
+                }));
                 adminAccounts = Object.assign({}, data.adminAccounts);
                 inactiveShops = data.inactiveShops || {};
                 mainAdminPassword = data.mainAdminPassword || null;
@@ -570,19 +641,18 @@
         }
 
         isToggling = true;
-        if (!item.reports) {
-            item.reports = { broken: {}, outOfStock: {} };
-        }
-        const isBroken = Object.keys(item.reports.broken).length > 0;
-        if (isBroken) {
-            item.reports.broken = {};
-            logAdminAction(`Cleared broken status for item: ${item.name} (${item.shop})`);
-            alert(`Item '${item.name}' is no longer marked as broken.`);
+        
+        // TOGGLE THE OFFICIAL STATUS FLAG
+        item.isOfficiallyBroken = !item.isOfficiallyBroken;
+
+        if (item.isOfficiallyBroken) {
+            logAdminAction(`Officially marked item as BROKEN: ${item.name} (${item.shop})`);
+            alert(`Item '${item.name}' is now officially marked as broken.`);
         } else {
-            item.reports.broken['admin'] = true;
-            logAdminAction(`Marked item as broken: ${item.name} (${item.shop})`);
-            alert(`Item '${item.name}' is now marked as broken.`);
+            logAdminAction(`Officially marked item as NOT BROKEN: ${item.name} (${item.shop})`);
+            alert(`Item '${item.name}' is no longer officially marked as broken.`);
         }
+
         saveAllData();
         renderItems(shopItems);
         setTimeout(() => {
@@ -642,9 +712,9 @@
             if (inactiveShops[item.shop]) {
                 div.classList.add('inactive');
             }
-            if (item.reports && Object.keys(item.reports.broken).length > 0) {
+            // CRITICAL CHANGE: Only add 'broken' class if officially marked by admin
+            if (item.isOfficiallyBroken) {
                 div.classList.add('broken');
-        
             }
             
             // Public View: Click to Report
@@ -661,7 +731,9 @@
                 const brokenCount = item.reports && item.reports.broken ? Object.keys(item.reports.broken).length : 0;
                 const outOfStockCount = item.reports && item.reports.outOfStock ?
                     Object.keys(item.reports.outOfStock).length : 0;
-                const isBroken = brokenCount > 0;
+                
+                // Use the official flag for the button state
+                const isBroken = item.isOfficiallyBroken;
                 
                 div.innerHTML = `
                     <input type="text" value="${item.name}" data-field="name" data-index="${originalIndex}" />
@@ -672,7 +744,7 @@
                     <input type="text" value="${item.shop}" data-field="shop" data-index="${originalIndex}" ${shopInputDisabled}/>
                     <button class="removeBtn" data-index="${originalIndex}">Remove</button>
                     <button class="toggleItemBrokenBtn ${isBroken ? 'is-broken' : ''}" data-index="${originalIndex}">${isBroken ?
-                        'Clear Broken' : 'Mark Broken'}</button>
+                        'Mark Fixed' : 'Mark Broken'}</button>
                     <button class="resolvedBtn" data-index="${originalIndex}" data-type="broken">Resolve Broken Shop (${brokenCount})</button>
                     <button class="resolvedBtn" data-index="${originalIndex}" data-type="outOfStock">Resolve Out of Stock (${outOfStockCount})</button>
                     `;
@@ -780,6 +852,7 @@
         }
     }
 
+    // UPDATED FUNCTION: Now shows Item Detail Page
     function showReportPage(item, index) {
         document.getElementById("main-view").style.display = "none";
         document.getElementById("report-view").style.display = "block";
@@ -803,6 +876,7 @@
             alert("You have already reported this issue.");
             return;
         }
+        // Public reports are added to the list, but this does NOT affect the item's visual broken status.
         shopItems[itemIndex].reports[type][userId] = true;
         alert("Thank you for your report! The issue has been noted.");
         closeReportPage();
@@ -821,6 +895,7 @@
         if (!item.reports) {
             return;
         }
+        // Clearing the reports (the notification)
         item.reports[type] = {};
         logAdminAction(`Resolved ${type} reports for item: ${item.name} (${item.shop})`);
         alert(`Reports for ${item.name} from ${item.shop} (${type}) have been resolved.`);
@@ -992,11 +1067,6 @@
                 }
             }
             
-            if (!priceFound) {
-                alert(`Could not parse price for item: "${line}". Use format: Shop > [Qty] Item [for] Price Currency (or Free)`);
-                return;
-            }
-            
             if (rest.toLowerCase().endsWith(' for')) {
                 rest = rest.slice(0, rest.length - 4).trim();
             }
@@ -1016,7 +1086,15 @@
                 return;
             }
             
-            shopItems.push({ shop, quantity, name, price, currency, reports: { broken: {}, outOfStock: {} } });
+            shopItems.push({ 
+                shop, 
+                quantity, 
+                name, 
+                price, 
+                currency, 
+                reports: { broken: {}, outOfStock: {} },
+                isOfficiallyBroken: false // Initialize new flag
+            });
             if (inactiveShops[shop] === undefined) {
                 inactiveShops[shop] = false;
             }
