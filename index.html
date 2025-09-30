@@ -34,7 +34,7 @@
             margin-bottom: 20px;
             justify-content: center;
         }
-        input[type="text"], textarea, input[type="number"] {
+        input[type="text"], textarea, input[type="number"], input[type="password"] {
             padding: 10px;
             font-size: 1em;
             border: 1px solid #ccc;
@@ -74,7 +74,7 @@
             background-color: #fff176;
         }
         .item.broken {
-            background-color: #ffcdd2; /* Only applied when officially marked broken by admin */
+            background-color: #ffcdd2;
         }
         .item input {
             width: 100%;
@@ -127,7 +127,8 @@
             background-color: #cc4444;
         }
         #adminPanel {
-            display: none;
+            /* Only visible when an admin is logged in */
+            display: none; 
             margin-top: 20px;
             padding: 20px;
             border: 1px solid #ddd;
@@ -139,6 +140,7 @@
             top: 20px;
             right: 20px;
             background-color: black;
+            z-index: 1000; /* Ensure it's above other elements if active */
         }
         #adminBtn:hover {
             background-color: #333;
@@ -148,6 +150,64 @@
             padding-top: 20px;
             border-top: 1px solid #ccc;
         }
+        
+        /* --- NEW MODAL STYLES --- */
+        #loginModalOverlay {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 10000; /* High z-index to cover everything */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #adminLoginSection {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+            text-align: center;
+        }
+        #adminLoginSection h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        #adminPasswordInput {
+            margin-bottom: 15px;
+            width: calc(100% - 20px);
+            min-width: auto;
+            box-sizing: border-box;
+        }
+        #adminLoginCloseBtn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #e57373; /* Red color */
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            font-size: 1.2em;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        #adminLoginCloseBtn:hover {
+            background-color: #cc4444;
+        }
+        /* --- END NEW MODAL STYLES --- */
+        
+        /* ... (rest of CSS remains the same) ... */
         .report-page, .suggestions-page {
             display: none;
             text-align: center;
@@ -206,7 +266,7 @@
             color: white;
         }
         
-        /* Styles for Item Detail View (new structure) */
+        /* Styles for Item Detail View */
         #item-detail-container {
             display: flex;
             justify-content: center;
@@ -214,14 +274,12 @@
             margin: 20px auto;
             text-align: left;
         }
-
         #item-picture-and-controls {
-            width: 250px; 
+            width: 250px;
             flex-shrink: 0;
             margin-right: 20px;
             text-align: center; 
         }
-
         #item-picture-space {
             width: 100%;
             height: 250px;
@@ -235,19 +293,16 @@
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
-
         #report-controls {
             display: flex;
             flex-direction: column;
             align-items: center;
             margin-top: 10px;
         }
-
         #report-controls p {
             margin: 5px 0;
             font-weight: bold;
         }
-
         /* Adjust Report buttons for the detail view */
         .report-button {
             display: block;
@@ -264,14 +319,12 @@
         .report-button:hover {
             background-color: #cc4444;
         }
-
         #item-info-description {
             flex-grow: 1;
             text-align: left;
             padding: 10px 0 10px 20px;
             border-left: 1px solid #ccc;
         }
-
         /* New styles for Suggestions page */
         .suggestions-page {
             padding: 20px;
@@ -354,7 +407,15 @@
     </style>
 </head>
 <body>
-
+    
+    <div id="loginModalOverlay" style="display: none;">
+        <div id="adminLoginSection">
+            <button id="adminLoginCloseBtn">X</button>
+            <h3>Admin Login</h3>
+            <input type="password" id="adminPasswordInput" placeholder="Enter Admin Password" autocomplete="current-password" />
+            <button id="adminLoginBtn">Login</button>
+        </div>
+    </div>
     <div id="main-view">
         <button id="adminBtn">Admin</button>
         <h1>Nixie Bot</h1>
@@ -363,7 +424,6 @@
             <div class="search-container">
                 <input type="text" id="search-term" placeholder="Search item name..." />
                 <button id="search-toggle-btn">Shop</button>
-    
             </div>
             <button id="search-btn">Search</button>
             <button id="sort-alpha-btn">Sort A–Z</button>
@@ -373,12 +433,10 @@
 
         <div id="adminPanel">
             <h3>Paste Items Below</h3>
-      
             <textarea id="adminInput" placeholder="Format: Shop > [Quantity] Item [for] Price Currency (or 'Free')"></textarea><br>
             <button id="addItemsBtn">Add Items</button>
 
             <div id="fullAdminControls" style="display: none;">
-                
                 <div id="password-manager-section" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ccc;">
                     <h3>Manage Admin Accounts (Main Admin Only)</h3>
                     
@@ -405,7 +463,7 @@
                 <button id="toggleInactiveBtn">Toggle Inactive</button>
             </div>
 
-            <div id="shopOwnerInactiveToggle" class="inactive-manager">
+            <div id="shopOwnerInactiveToggle" class="inactive-manager" style="display: none;">
                 <h3>My Shop Status</h3>
                 <button id="toggleMyStatusBtn">Toggle Inactive</button>
             </div>
@@ -421,7 +479,7 @@
         <div id="item-detail-container">
             <div id="item-picture-and-controls">
                 <div id="item-picture-space">
-                    <p>🖼️ Image Placeholder</p>
+                    <p>Image Placeholder</p>
                 </div>
                 
                 <div id="report-controls">
@@ -446,7 +504,6 @@
         <div class="suggestion-form">
             <h3>Submit Your Own Suggestion</h3>
             <textarea id="suggestion-input" placeholder="Type your suggestion here..."></textarea>
-            
             <button id="submit-suggestion-btn">Submit Suggestion</button>
         </div>
     </div>
@@ -475,7 +532,7 @@
     let shopItems = [];
     let adminAccounts = {};
     let mainAdminPassword = null;
-    let limitedMainPassword = null; 
+    let limitedMainPassword = null;
     let generalAdminLog = []; 
     
     /**
@@ -512,7 +569,8 @@
     // --- LOGGING FUNCTIONS (NOW GENERAL) ---
     function logAdminAction(actionDescription) {
         if (!currentPerms) {
-            return; // Only log for logged-in admins
+            return;
+            // Only log for logged-in admins
         }
         
         let identity;
@@ -523,7 +581,8 @@
         } else if (Array.isArray(currentPerms)) {
             identity = `Shop Owner(s) [${currentPerms.join(", ")}]`;
         } else {
-            return; // Should not happen
+            return;
+            // Should not happen
         }
 
         const timestamp = new Date().toLocaleString();
@@ -532,13 +591,13 @@
         
         // Limit log size to prevent excessive data growth (e.g., 50 entries)
         if (generalAdminLog.length > 50) {
-            generalAdminLog.pop(); 
+            generalAdminLog.pop();
         }
         renderGeneralLog();
     }
     
     function renderGeneralLog() {
-        const logDisplay = document.getElementById("generalAdminLogDisplay"); 
+        const logDisplay = document.getElementById("generalAdminLogDisplay");
         if (logDisplay) {
             logDisplay.value = generalAdminLog.join('\n');
         }
@@ -555,7 +614,6 @@
             suggestions: suggestions,
             limitedAdminLog: generalAdminLog 
        };
-        
         try {
             await setDoc(doc(db, "shop-data", "main-data"), dataToSave);
             console.log("Data saved to Firestore!");
@@ -578,9 +636,9 @@
                 adminAccounts = Object.assign({}, data.adminAccounts);
                 inactiveShops = data.inactiveShops || {};
                 mainAdminPassword = data.mainAdminPassword || null;
-                limitedMainPassword = data.limitedMainPassword || null; 
+                limitedMainPassword = data.limitedMainPassword || null;
                 suggestions = data.suggestions || [];
-                generalAdminLog = data.limitedAdminLog || []; 
+                generalAdminLog = data.limitedAdminLog || [];
             }
         } catch (e) {
             console.error("Error loading data: ", e);
@@ -610,6 +668,74 @@
     document.getElementById("suggestions-btn").addEventListener("click", showSuggestionsPage);
     document.getElementById("closeSuggestionsBtn").addEventListener("click", closeSuggestionsPage);
     document.getElementById("submit-suggestion-btn").addEventListener("click", submitSuggestion);
+    
+    // NEW: Login button handler and Close button handler
+    document.getElementById("adminLoginBtn").addEventListener("click", performAdminLogin);
+    document.getElementById("adminLoginCloseBtn").addEventListener("click", hideLoginModal);
+
+
+    // NEW FUNCTION: Hide the modal
+    function hideLoginModal() {
+        document.getElementById("loginModalOverlay").style.display = "none";
+        document.getElementById("adminPasswordInput").value = "";
+    }
+
+    // NEW FUNCTION: Show the admin panel content based on permissions
+    function showAdminPanelContent(perms) {
+        document.getElementById("loginModalOverlay").style.display = "none";
+        document.getElementById("adminPanel").style.display = "block";
+        document.getElementById("adminBtn").textContent = "Log out";
+        
+        const fullAdminControls = document.getElementById("fullAdminControls"); 
+        const mainAdminPanel = document.getElementById("mainAdminInactiveToggle");
+        const shopOwnerPanel = document.getElementById("shopOwnerInactiveToggle");
+        
+        // Reset all visibility
+        fullAdminControls.style.display = "none";
+        mainAdminPanel.style.display = "none";
+        shopOwnerPanel.style.display = "none";
+
+        if (perms === "all") {
+            fullAdminControls.style.display = "block";
+            mainAdminPanel.style.display = "block";
+            renderAdminAccounts();
+            renderGeneralLog();
+        } else if (perms === "_LIMITED_EDIT_ALL_") {
+            mainAdminPanel.style.display = "block";
+        } else if (Array.isArray(perms)) {
+            shopOwnerPanel.style.display = "block";
+            updateMyToggleButton();
+        }
+
+        renderItems(shopItems);
+        document.getElementById("adminPasswordInput").value = ""; // Clear password after successful login
+    }
+
+    function performAdminLogin() {
+        const passwordInput = document.getElementById("adminPasswordInput");
+        const password = passwordInput.value.trim();
+        
+        if (!password) {
+            alert("Please enter a password.");
+            return;
+        }
+
+        if (password === mainAdminPassword) {
+            currentPerms = "all";
+            showAdminPanelContent(currentPerms);
+        } else if (password === limitedMainPassword && limitedMainPassword !== null) { 
+            currentPerms = "_LIMITED_EDIT_ALL_";
+            showAdminPanelContent(currentPerms);
+            alert("Logged in with limited editor permissions. You can view, add, and modify all items, and manage shop active/inactive status.");
+        } else if (adminAccounts[password]) {
+            currentPerms = adminAccounts[password].perms;
+            showAdminPanelContent(currentPerms);
+        } else {
+            alert("Incorrect password.");
+            passwordInput.value = ""; // Clear password on failure
+        }
+    }
+
 
     function setLimitedMainAdminPassword() {
         if (currentPerms !== "all") {
@@ -634,17 +760,14 @@
             return;
         }
         const item = shopItems[index];
-
         if (!isPermittedToEdit(item)) {
             alert("Permission denied to modify this item status.");
             return;
         }
 
         isToggling = true;
-        
         // TOGGLE THE OFFICIAL STATUS FLAG
         item.isOfficiallyBroken = !item.isOfficiallyBroken;
-
         if (item.isOfficiallyBroken) {
             logAdminAction(`Officially marked item as BROKEN: ${item.name} (${item.shop})`);
             alert(`Item '${item.name}' is now officially marked as broken.`);
@@ -698,7 +821,6 @@
             const originalIndex = shopItems.findIndex(i => 
                 i.shop === item.shop && 
                 i.name === item.name &&
-      
                 i.quantity === item.quantity &&
                 i.price === item.price
             );
@@ -706,7 +828,7 @@
             if (originalIndex === -1) return; // Should not happen
 
             const div = document.createElement("div");
-          
+            
             div.className = "item";
             
             if (inactiveShops[item.shop]) {
@@ -719,6 +841,7 @@
             
             // Public View: Click to Report
             if (currentPerms === null) {
+                
                 div.addEventListener('click', () => showReportPage(item, originalIndex));
             }
             
@@ -726,45 +849,40 @@
             if (currentPerms) {
                 // "all" AND "_LIMITED_EDIT_ALL_" can edit shop and currency
                 const shopInputDisabled = (currentPerms !== "all" && currentPerms !== "_LIMITED_EDIT_ALL_") ?
-                    "disabled" : "";
+                "disabled" : "";
                 
                 const brokenCount = item.reports && item.reports.broken ? Object.keys(item.reports.broken).length : 0;
                 const outOfStockCount = item.reports && item.reports.outOfStock ?
-                    Object.keys(item.reports.outOfStock).length : 0;
+                Object.keys(item.reports.outOfStock).length : 0;
                 
                 // Use the official flag for the button state
                 const isBroken = item.isOfficiallyBroken;
-                
                 div.innerHTML = `
                     <input type="text" value="${item.name}" data-field="name" data-index="${originalIndex}" />
                     <input type="number" value="${item.quantity}" data-field="quantity" data-index="${originalIndex}" />
                     <input type="text" value="${item.price}" data-field="price" data-index="${originalIndex}" />
-              
                     <input type="text" value="${item.currency}" data-field="currency" data-index="${originalIndex}" ${shopInputDisabled}/>
                     <input type="text" value="${item.shop}" data-field="shop" data-index="${originalIndex}" ${shopInputDisabled}/>
                     <button class="removeBtn" data-index="${originalIndex}">Remove</button>
                     <button class="toggleItemBrokenBtn ${isBroken ? 'is-broken' : ''}" data-index="${originalIndex}">${isBroken ?
-                        'Mark Fixed' : 'Mark Broken'}</button>
+                'Mark Fixed' : 'Mark Broken'}</button>
                     <button class="resolvedBtn" data-index="${originalIndex}" data-type="broken">Resolve Broken Shop (${brokenCount})</button>
                     <button class="resolvedBtn" data-index="${originalIndex}" data-type="outOfStock">Resolve Out of Stock (${outOfStockCount})</button>
                     `;
             } else {
                 // Public Read-only View
                 const priceDisplay = typeof item.price === 'number' ?
-                    item.price : 'Free';
+                item.price : 'Free';
                 div.innerHTML = `
                     <span><strong>${item.name}</strong></span>
                     <span>Quantity: ${item.quantity}</span>
                     <span>Price: ${priceDisplay}</span>
                     <span>Currency: ${item.currency}</span>
-            
                     <span>Shop: ${item.shop}</span>
                     `;
             }
             itemList.appendChild(div);
         });
-        
-        // Removed duplicated event listener setup from here.
     }
 
     function performSearch() {
@@ -921,7 +1039,6 @@
         }
         const newPass = document.getElementById("newPassword").value.trim();
         const perms = document.getElementById("permsShops").value.split(",").map(s => s.trim()).filter(s => s.length > 0);
-        
         // CHECK AGAINST CONFIGURABLE LIMITED ADMIN PASSWORD
         if (newPass === limitedMainPassword) {
             alert("The password cannot be the same as the Limited Main Admin password.");
@@ -1004,7 +1121,6 @@
                 const priceA = a.price === 'Free' ? 0 : a.price;
                 const priceB = b.price === 'Free' ? 0 : b.price;
                 return priceA - priceB;
-          
             });
         }
         renderItems(sorted);
@@ -1024,7 +1140,6 @@
         const input = document.getElementById("adminInput").value;
         const lines = input.split("\n").filter(line => line.trim() !== '');
         let itemsAdded = 0;
-
         lines.forEach(line => {
             const parts = line.split('>');
             if (parts.length < 2) {
@@ -1032,26 +1147,23 @@
                 return;
             }
         
+        
             const shop = parts[0].trim();
             
             // Check if the user has permission to add an item for this shop
             const canAdd = currentPerms === "all" || 
                            currentPerms === "_LIMITED_EDIT_ALL_" || 
-      
                            (Array.isArray(currentPerms) && currentPerms.includes(shop));
             
             if (!canAdd) {
                 alert(`You can only add items for your assigned shop(s): ${Array.isArray(currentPerms) ? currentPerms.join(", ") : "None"}`);
                 return;
-     
             }
             
             let rest = parts.slice(1).join('>').trim();
             let price = null;
             let currency = null;
             let priceFound = false;
-            
-         
             if (rest.toLowerCase().endsWith(' free')) {
                 price = 'Free';
                 currency = '';
@@ -1100,7 +1212,6 @@
             }
             itemsAdded++;
         });
-        
         if (itemsAdded > 0) {
             logAdminAction(`Bulk added ${itemsAdded} item(s).`);
         }
@@ -1110,81 +1221,42 @@
         renderItems(shopItems);
     }
 
+    // UPDATED ADMIN BUTTON LOGIC
     document.getElementById("adminBtn").addEventListener("click", async () => {
-        const fullAdminControls = document.getElementById("fullAdminControls"); 
-        const mainAdminPanel = document.getElementById("mainAdminInactiveToggle");
-        const shopOwnerPanel = document.getElementById("shopOwnerInactiveToggle");
-        
+        const adminPanel = document.getElementById("adminPanel");
+        const loginModalOverlay = document.getElementById("loginModalOverlay"); // NEW
+
         // LOGOUT LOGIC
         if (currentPerms !== null) {
             currentPerms = null;
             document.getElementById("adminBtn").textContent = "Admin";
-            document.getElementById("adminPanel").style.display = "none";
-            fullAdminControls.style.display = "none"; 
-            mainAdminPanel.style.display = "none";
-            shopOwnerPanel.style.display = "none";
+            adminPanel.style.display = "none"; // Hide the entire admin panel
+            hideLoginModal(); // Just in case the modal was open (shouldn't be)
             renderItems(shopItems);
             return;
         }
-        
-        // INITIAL SETUP FOR MAIN ADMIN PASSWORD
+
+        // INITIAL SETUP FOR MAIN ADMIN PASSWORD 
         if (mainAdminPassword === null) {
             const newPass = prompt("No main admin password set. Please enter a new password:");
             if (newPass) {
                 mainAdminPassword = newPass;
                 await saveAllData();
                 alert("Main admin password set successfully! Please log in.");
-                document.getElementById("adminBtn").click();
-                return;
+                // Fall through to show the modal
             } else {
                 alert("Password not set. Aborting.");
+                return; // Do not show modal
             }
-            return;
         }
         
-        // LOGIN LOGIC
-        const password = prompt("Enter admin password:");
-        if (password === mainAdminPassword) {
-            // FULL ADMIN LOGIN
-            currentPerms = "all";
-            document.getElementById("adminPanel").style.display = "block";
-            document.getElementById("adminBtn").textContent = "Log out";
-            renderItems(shopItems);
-            fullAdminControls.style.display = "block"; // SHOW Full Admin Controls (Passwords + Log)
-            mainAdminPanel.style.display = "block";
-            shopOwnerPanel.style.display = "none";
-            renderAdminAccounts();
-            renderGeneralLog();
-        } else if (password === limitedMainPassword && limitedMainPassword !== null) { 
-            // LIMITED EDITOR LOGIN
-            currentPerms = "_LIMITED_EDIT_ALL_";
-            document.getElementById("adminPanel").style.display = "block";
-            document.getElementById("adminBtn").textContent = "Log out";
-            renderItems(shopItems);
-            
-            fullAdminControls.style.display = "none"; // HIDE Full Admin Controls (Passwords + Log)
-            mainAdminPanel.style.display = "block"; 
-            shopOwnerPanel.style.display = "none";
-            
-            alert("Logged in with limited editor permissions. You can view, add, and modify all items, and manage shop active/inactive status.");
-        } else if (adminAccounts[password]) {
-            // SHOP OWNER LOGIN
-            currentPerms = adminAccounts[password].perms;
-            document.getElementById("adminPanel").style.display = "block";
-            document.getElementById("adminBtn").textContent = "Log out";
-            renderItems(shopItems);
-            fullAdminControls.style.display = "none"; // HIDE Full Admin Controls (Passwords + Log)
-            mainAdminPanel.style.display = "none";
-            shopOwnerPanel.style.display = "block";
-            updateMyToggleButton();
-        } else {
-            alert("Incorrect password.");
-        }
+        // SHOW LOGIN UI LOGIC
+        loginModalOverlay.style.display = "flex";
+        document.getElementById("adminPasswordInput").focus();
     });
 
     // --- DEDICATED, ONE-TIME EVENT LISTENERS FOR ITEM LIST ---
     const itemList = document.getElementById("item-list");
-
     // Delegate CHANGE events (for text/number input updates)
     itemList.addEventListener('change', (e) => {
         const target = e.target;
@@ -1207,7 +1279,6 @@
             toggleItemBrokenStatus(target.dataset.index);
         }
     });
-
     // --- SUGGESTION FUNCTIONS ---
     function showSuggestionsPage() {
         document.getElementById("main-view").style.display = "none";
@@ -1240,6 +1311,7 @@
             const netScore = upvotes - downvotes;
 
             let 
+            
             likedClass = '';
             let dislikedClass = '';
 
@@ -1247,6 +1319,7 @@
                 likedClass = 'liked-active';
             } else if (suggestion.downvotes[userId]) {
                 dislikedClass = 'disliked-active';
+     
             }
      
             
@@ -1254,16 +1327,17 @@
                 <span class="suggestion-score">${netScore}</span>
                 <p>${suggestion.text}</p>
                 <div class="vote-controls">
-                    <div class="vote-slider" data-id="${suggestion.id}">
+            
+                <div class="vote-slider" data-id="${suggestion.id}">
        
                         <button class="${dislikedClass}" data-vote="down">👎</button>
                         <button class="${likedClass}" data-vote="up">👍</button>
                     </div>
-                </div>
+           
+             </div>
             `;
             feed.appendChild(div);
         });
-        
         const sliders = document.querySelectorAll('.vote-slider');
         sliders.forEach(slider => {
             slider.addEventListener('click', (e) => {
@@ -1271,37 +1345,42 @@
                 const voteType = e.target.dataset.vote;
                 
                 const suggestion = suggestions.find(s => s.id === 
-            suggestionId);
+  
+                suggestionId);
                 if (!suggestion) return;
 
                 const hasLiked = suggestion.upvotes[userId];
                 const hasDisliked = suggestion.downvotes[userId];
 
                 if (voteType === 'up') {
+              
                     if (hasLiked) {
   
                         // User is removing their like vote
                         delete suggestion.upvotes[userId];
                     } else {
+             
                         // 
                         // User is casting a new like vote
                         delete suggestion.downvotes[userId];
                         suggestion.upvotes[userId] = true;
+      
                     }
                 } else if (voteType === 'down') {
  
                     if (hasDisliked) {
                         // User is removing their dislike vote
+           
                         delete suggestion.downvotes[userId];
-            } else {
+                    } else {
                         // User is casting a new dislike vote
                         delete suggestion.upvotes[userId];
-            suggestion.downvotes[userId] = true;
+                        suggestion.downvotes[userId] = true;
                     }
                 }
                 
                 saveAllData();
-            renderSuggestions();
+                renderSuggestions();
             });
         });
     }
